@@ -84,6 +84,16 @@ export default function WeeklyAchievementModal({ onClose }) {
 
   // 날짜별 상태 및 색상 결정
   const getDateStatus = (date, dateObj) => {
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const compareDate = new Date(dateObj);
+    compareDate.setHours(0, 0, 0, 0);
+    
+    // 미래 날짜는 색상 없이 표시
+    if (compareDate > todayDate) {
+      return { status: "normal", color: null };
+    }
+    
     const completionRate = getCompletionRate(dateObj);
     
     if (date === today) {

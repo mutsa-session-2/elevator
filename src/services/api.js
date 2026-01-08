@@ -58,6 +58,11 @@ export async function getMyCharacter() {
   return await http.get("/api/characters/me");
 }
 
+// 뱃지 목록 조회 API
+export async function getMyBadges() {
+  return await http.get("/api/me/badges");
+}
+
 // 캘린더 완료 통계 API
 export async function getCalendarStats(start, end) {
   return await http.get(`/api/floors/calendar?start=${start}&end=${end}`);

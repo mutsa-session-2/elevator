@@ -341,7 +341,10 @@ export default function MyCalendar() {
 
   // 메인 캘린더 화면
   return (
-    <div className="app home-view">
+    <div
+      className="app home-view"
+      style={{ background: "#DFDFDF", minHeight: "100vh" }}
+    >
       <PersonalHeader />
 
       <main
@@ -357,6 +360,7 @@ export default function MyCalendar() {
           marginLeft: "calc(50% - 50vw)",
           marginRight: "calc(50% - 50vw)",
           paddingTop: "0",
+          background: "#DFDFDF",
         }}
       >
         {/* 달력과 작업 목록 컨테이너 */}

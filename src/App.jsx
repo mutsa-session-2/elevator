@@ -11,6 +11,9 @@ import Mypage from "./pages/Mypage.jsx";
 import MyCalendar from "./pages/MyCalendar.jsx";
 import TeamPlace from "./pages/TeamPlace.jsx";
 import Customize from "./pages/Customize.jsx";
+import ProfileManage from "./pages/ProfileManage.jsx";
+import TendencyEdit from "./pages/TendencyEdit.jsx";
+import Withdraw from "./pages/Withdraw.jsx";
 
 export default function App() {
   return (
@@ -21,6 +24,9 @@ export default function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/tendency" element={<TendencyInfo />} />
       <Route path="/mypage" element={<Mypage />} />
+      <Route path="/profile-manage" element={<ProfileManage />} />
+      <Route path="/tendency-edit" element={<TendencyEdit />} />
+      <Route path="/withdraw" element={<Withdraw />} />
       <Route path="/mycalendar" element={<MyCalendar />} />
       <Route path="/teamplace" element={<TeamPlace />} />
       <Route path="/customize" element={<Customize />} />

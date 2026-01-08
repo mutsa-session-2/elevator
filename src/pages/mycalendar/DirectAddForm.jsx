@@ -80,7 +80,7 @@ export default function DirectAddForm({ onBack, onSuccess }) {
   };
 
   return (
-    <div className="app home-view">
+    <div className="app home-view" style={{ background: "#DFDFDF", minHeight: "100vh" }}>
       <PersonalHeader />
       <main
         className="page-content"
@@ -90,6 +90,7 @@ export default function DirectAddForm({ onBack, onSuccess }) {
           justifyContent: "center",
           marginTop: "15px",
           marginBottom: "15px",
+          background: "#DFDFDF",
         }}
       >
         <div
