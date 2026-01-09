@@ -3,8 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import PersonalHeader from "../components/PersonalHeader.jsx";
-import { getMyCharacter } from "../services/api.js";
+import { getMyCharacter, getMyUsername, updateUsername } from "../services/api.js";
 import { AUTH_USER_KEY, AUTH_TOKEN_KEY } from "../config.js";
+import settingIcon from "../assets/navvar/button_setting.png";
 
 export default function ProfileManage() {
   const navigate = useNavigate();
@@ -14,25 +15,33 @@ export default function ProfileManage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // localStorage에서 사용자 정보 가져오기
-    const userData = localStorage.getItem(AUTH_USER_KEY);
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setNickname(parsedUser.username || parsedUser.name || "");
-      } catch (e) {
-        console.error("사용자 정보 파싱 실패:", e);
-      }
-    }
-
-    // 캐릭터 이미지 로드
-    const loadCharacter = async () => {
+    const loadData = async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         return;
       }
 
+      // 닉네임 로드
+      try {
+        const usernameData = await getMyUsername();
+        if (usernameData && usernameData.username) {
+          setNickname(usernameData.username);
+        }
+      } catch (error) {
+        console.error("닉네임 로드 실패:", error);
+        // 실패 시 localStorage에서 가져오기
+        const userData = localStorage.getItem(AUTH_USER_KEY);
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            setNickname(parsedUser.username || parsedUser.name || "");
+          } catch (e) {
+            console.error("사용자 정보 파싱 실패:", e);
+          }
+        }
+      }
+
+      // 캐릭터 이미지 로드
       try {
         const data = await getMyCharacter();
         if (data && data.imageUrl) {
@@ -43,7 +52,7 @@ export default function ProfileManage() {
       }
     };
 
-    loadCharacter();
+    loadData();
   }, []);
 
   const handleSave = async () => {
@@ -54,16 +63,21 @@ export default function ProfileManage() {
 
     setLoading(true);
     try {
-      // TODO: 닉네임 업데이트 API 호출
-      // await updateProfile({ username: nickname });
+      // 닉네임 업데이트 API 호출
+      await updateUsername(nickname.trim());
       
       // localStorage 업데이트
-      if (user) {
-        const updatedUser = { ...user, username: nickname };
-        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+      const userData = localStorage.getItem(AUTH_USER_KEY);
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          const updatedUser = { ...parsedUser, username: nickname.trim() };
+          localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+        } catch (e) {
+          console.error("사용자 정보 업데이트 실패:", e);
+        }
       }
       
-      alert("프로필이 저장되었습니다.");
       navigate("/mypage");
     } catch (error) {
       console.error("프로필 저장 실패:", error);
@@ -75,7 +89,7 @@ export default function ProfileManage() {
 
   return (
     <div className="app home-view" style={{ background: "#DFDFDF", minHeight: "100vh" }}>
-      <PersonalHeader />
+      <PersonalHeader icon={settingIcon} title="마이페이지" />
 
       <main
         className="page-content"

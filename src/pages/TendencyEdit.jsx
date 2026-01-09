@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import PersonalHeader from "../components/PersonalHeader.jsx";
 import { saveTendency } from "../services/tendency.js";
 import { getMyProfile } from "../services/profile.js";
+import settingIcon from "../assets/navvar/button_setting.png";
 
 // 계획 성향 옵션 (한국어 텍스트 -> API enum 값 매핑)
 const PLANNING_OPTIONS = [
@@ -93,7 +94,7 @@ export default function TendencyEdit() {
 
   return (
     <div className="app home-view" style={{ background: "#DFDFDF", minHeight: "100vh" }}>
-      <PersonalHeader />
+      <PersonalHeader icon={settingIcon} title="마이페이지" />
 
       <main
         className="page-content"

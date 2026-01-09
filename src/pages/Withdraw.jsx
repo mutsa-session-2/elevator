@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import PersonalHeader from "../components/PersonalHeader.jsx";
 import { API_BASE_URL, AUTH_TOKEN_KEY } from "../config.js";
+import settingIcon from "../assets/navvar/button_setting.png";
 
 const PRIMARY_COLOR = "#0A7C88";
 
@@ -78,7 +79,7 @@ export default function Withdraw() {
 
   return (
     <div className="app home-view" style={{ background: "#DFDFDF", minHeight: "100vh" }}>
-      <PersonalHeader />
+      <PersonalHeader icon={settingIcon} title="마이페이지" />
 
       <main
         className="page-content"

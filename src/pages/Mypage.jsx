@@ -3,12 +3,14 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import PersonalHeader from "../components/PersonalHeader.jsx";
+import settingIcon from "../assets/navvar/button_setting.png";
 import { logout } from "../services/auth.js";
 import { AUTH_USER_KEY, AUTH_TOKEN_KEY } from "../config.js";
 import {
   getCalendarStats,
   getMyCharacter,
   getMyBadges,
+  getMyUsername,
 } from "../services/api.js";
 
 const WEEKDAY_LABELS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -59,17 +61,51 @@ export default function Mypage() {
   const [loading, setLoading] = useState(true);
   const [characterImageUrl, setCharacterImageUrl] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [badges, setBadges] = useState([]);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     // localStorage에서 사용자 정보 가져오기
     const userData = localStorage.getItem(AUTH_USER_KEY);
     if (userData) {
       try {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        // localStorage에 닉네임이 있으면 임시로 표시
+        setUsername(parsedUser.username || parsedUser.name || "");
       } catch (e) {
         console.error("사용자 정보 파싱 실패:", e);
       }
     }
+
+    // API에서 닉네임 로드
+    const loadUsername = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        return;
+      }
+
+      try {
+        const usernameData = await getMyUsername();
+        if (usernameData && usernameData.username) {
+          setUsername(usernameData.username);
+          // localStorage도 업데이트
+          if (userData) {
+            try {
+              const parsedUser = JSON.parse(userData);
+              const updatedUser = { ...parsedUser, username: usernameData.username };
+              localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+            } catch (e) {
+              // 무시
+            }
+          }
+        }
+      } catch (error) {
+        console.error("닉네임 로드 실패:", error);
+      }
+    };
+
+    loadUsername();
   }, []);
 
   // 캐릭터 이미지 로드
@@ -91,6 +127,27 @@ export default function Mypage() {
     };
 
     loadCharacter();
+  }, []);
+
+  // 뱃지 목록 로드
+  useEffect(() => {
+    const loadBadges = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        return;
+      }
+
+      try {
+        const data = await getMyBadges();
+        if (Array.isArray(data)) {
+          setBadges(data);
+        }
+      } catch (error) {
+        console.error("뱃지 목록 로드 실패:", error);
+      }
+    };
+
+    loadBadges();
   }, []);
 
   // 이번 주 달성률 데이터 로드
@@ -151,14 +208,20 @@ export default function Mypage() {
 
     const completionRate = getCompletionRate(dateObj);
 
+    // 오늘 날짜는 달성했을 때만 색상 표시
     if (date === today) {
-      return {
-        status: "current",
-        color:
-          completionRate !== null
-            ? getColorByCompletionRate(completionRate)
-            : null,
-      };
+      const isTodayDate = compareDate.getTime() === todayDate.getTime();
+      if (isTodayDate) {
+        // 오늘 날짜이고 completionRate가 있고 0보다 크면 색상 표시
+        if (completionRate !== null && completionRate > 0) {
+          return {
+            status: "current",
+            color: getColorByCompletionRate(completionRate),
+          };
+        }
+        // 오늘 날짜이지만 달성하지 않았으면 색상 없이 표시
+        return { status: "current", color: null };
+      }
     }
 
     if (completionRate === null) {
@@ -189,9 +252,19 @@ export default function Mypage() {
       date === today && compareDate.getTime() === todayDate.getTime();
 
     if (status === "current" || isToday) {
+      // 오늘 날짜이지만 색상이 없으면 (달성하지 않음) border만 표시
+      if (!color) {
+        return {
+          background: "transparent",
+          color: "#111827",
+          border: "3px solid #111827",
+          boxSizing: "border-box",
+        };
+      }
+      // 오늘 날짜이고 색상이 있으면 (달성함) 색상과 border 표시
       return {
-        background: color || "transparent",
-        color: color ? "#fff" : "#111827",
+        background: color,
+        color: "#fff",
         border: "3px solid #111827",
         boxSizing: "border-box",
       };
@@ -213,7 +286,7 @@ export default function Mypage() {
       className="app home-view"
       style={{ background: "#DFDFDF", minHeight: "100vh" }}
     >
-      <PersonalHeader />
+      <PersonalHeader icon={settingIcon} title="마이페이지" />
 
       <main
         className="page-content"
@@ -278,7 +351,7 @@ export default function Mypage() {
                   fontFamily: "var(--font-sans)",
                 }}
               >
-                {user?.username || user?.name || "홍길동"}
+                {username || user?.username || user?.name || "홍길동"}
               </span>
             </div>
             <div
@@ -375,6 +448,7 @@ export default function Mypage() {
               획득한 뱃지
             </span>
             <div
+              onClick={() => navigate("/badges")}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -407,44 +481,61 @@ export default function Mypage() {
               flexWrap: "wrap",
             }}
           >
-            {[
-              { emoji: "🏆", number: "50", color: "#fbbf24" },
-              { emoji: "⭐", number: null, color: "#fbbf24" },
-              { emoji: "💜", number: "30", color: "#a855f7" },
-              { emoji: "❤️", number: "10", color: "#ef4444" },
-              { emoji: "💙", number: "1", color: "#3b82f6" },
-            ].map((badge, index) => (
+            {badges.slice(0, 5).map((badge) => (
               <div
-                key={index}
+                key={badge.badgeId}
                 style={{
                   width: "60px",
                   height: "60px",
-                  borderRadius: "12px",
-                  background: badge.color,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "24px",
+                  overflow: "hidden",
                   position: "relative",
                 }}
               >
-                <span>{badge.emoji}</span>
-                {badge.number && (
-                  <span
+                {badge.imageUrl ? (
+                  <img
+                    src={badge.imageUrl}
+                    alt={badge.name}
                     style={{
-                      position: "absolute",
-                      bottom: "4px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#fff",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      imageRendering: "pixelated",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "24px",
                     }}
                   >
-                    {badge.number}
-                  </span>
+                    🏆
+                  </div>
                 )}
               </div>
             ))}
+            {badges.length === 0 && (
+              <div
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "20px",
+                  color: "#6b7280",
+                  fontSize: "14px",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                획득한 뱃지가 없습니다.
+              </div>
+            )}
           </div>
         </div>
 

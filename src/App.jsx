@@ -14,6 +14,7 @@ import Customize from "./pages/Customize.jsx";
 import ProfileManage from "./pages/ProfileManage.jsx";
 import TendencyEdit from "./pages/TendencyEdit.jsx";
 import Withdraw from "./pages/Withdraw.jsx";
+import BadgeList from "./pages/BadgeList.jsx";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/profile-manage" element={<ProfileManage />} />
       <Route path="/tendency-edit" element={<TendencyEdit />} />
       <Route path="/withdraw" element={<Withdraw />} />
+      <Route path="/badges" element={<BadgeList />} />
       <Route path="/mycalendar" element={<MyCalendar />} />
       <Route path="/teamplace" element={<TeamPlace />} />
       <Route path="/customize" element={<Customize />} />
