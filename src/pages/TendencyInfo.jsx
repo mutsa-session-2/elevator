@@ -30,7 +30,7 @@ const styles = {
     padding: "10px 12px",
     borderRadius: 5,
     backgroundColor: "#E1E1E1",
-    fontSize: 13,
+    fontSize: 11,
     color: "#4b5563",
     textAlign: "center",
     cursor: "pointer",
@@ -112,7 +112,7 @@ export default function TendencyInfo() {
         <div className="login-card">
           <h2 className="login-title">당신에 대해 더 알고 싶어요!</h2>
           <p className="login-subtitle">
-            모든 항목은 설정에서 언제든지 변경할 수 있어요.
+            모든 항목은 설정에서 언제나 변경 가능합니다.
           </p>
 
           {/* 계획 성향 */}

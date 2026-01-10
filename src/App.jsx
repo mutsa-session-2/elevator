@@ -9,9 +9,14 @@ import Home from "./pages/Home.jsx";
 import TendencyInfo from "./pages/TendencyInfo.jsx";
 import Mypage from "./pages/Mypage.jsx";
 import MyCalendar from "./pages/MyCalendar.jsx";
-import TeamPlace from "./pages/TeamPlace.jsx";
+import JoinedTeamPlace from "./pages/JoinedTeamPlace.jsx";
 import Customize from "./pages/Customize.jsx";
-
+import TeamCalendar from "./pages/TeamCalendar.jsx";
+import TeamPlaceHome from "./pages/TeamPlaceHome.jsx";
+import RoomManagement from "./pages/RoomManagement.jsx";
+import MemberRemoval from "./pages/MemberRemoval.jsx";
+import RoomRemoval from "./pages/RoomRemoval.jsx";
+import SpecificTeamPlans from "./pages/SpecificTeamPlans.jsx";
 export default function App() {
   return (
     <Routes>
@@ -22,8 +27,19 @@ export default function App() {
       <Route path="/tendency" element={<TendencyInfo />} />
       <Route path="/mypage" element={<Mypage />} />
       <Route path="/mycalendar" element={<MyCalendar />} />
-      <Route path="/teamplace" element={<TeamPlace />} />
+      <Route path="/joinedteamplace" element={<JoinedTeamPlace />} />
       <Route path="/customize" element={<Customize />} />
+
+      {/* ✅ teamId를 URL로 들고 다니기 */}
+      <Route path="/teamplacehome/:teamId" element={<TeamPlaceHome />} />
+      <Route path="/roommanagement/:teamId" element={<RoomManagement />} />
+      <Route path="/memberremoval/:teamId" element={<MemberRemoval />} />
+      <Route path="/roomremoval/:teamId" element={<RoomRemoval />} />
+      <Route path="/teamcalendar/:teamId" element={<TeamCalendar />} />
+      <Route
+        path="/specificteamplans/:teamId"
+        element={<SpecificTeamPlans />}
+      />
     </Routes>
   );
 }
