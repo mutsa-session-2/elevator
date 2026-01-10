@@ -1,0 +1,130 @@
+.tp-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #6f8f8f; /* 피그마 느낌의 청록/그레이 배경 */
+  font-family: "DungGeunMo", sans-serif;
+  padding-bottom: 80px; /* navbar 공간 */
+  box-sizing: border-box;
+}
+
+.tp-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 16px 0;
+  box-sizing: border-box;
+}
+
+.tp-actions {
+  width: min(360px, calc(100vw - 32px));
+  display: flex;
+  gap: 12px;
+  margin: 10px 0 12px;
+}
+
+.tp-actionBtn {
+  flex: 1;
+  height: 44px;
+  background: #2aa6a0;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.18);
+}
+.tp-actionBtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
+}
+
+.tp-card {
+  width: min(360px, calc(100vw - 32px));
+  flex: 1;
+  min-height: 0;
+  background: #efefef;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.14);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tp-cardTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111;
+  margin: 2px 0 10px;
+}
+
+.tp-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.tp-teamRow {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e7e7e7;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tp-teamRowTop {
+  background: #d9d9d9;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tp-teamName {
+  font-weight: 800;
+  font-size: 13px;
+  color: #111;
+}
+
+.tp-goBtn {
+  width: 40px;
+  height: 24px;
+  border-radius: 8px;
+  background: #2aa6a0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.tp-teamBody {
+  padding: 10px 12px;
+}
+
+.tp-teamDates {
+  font-size: 12px;
+  color: #555;
+}
+
+.tp-muted {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.tp-error {
+  font-size: 12px;
+  color: #b00020;
+}

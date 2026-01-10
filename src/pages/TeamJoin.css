@@ -1,0 +1,199 @@
+.tj-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #6f8f8f;
+  font-family: "DungGeunMo", sans-serif;
+  padding-bottom: 80px;
+  box-sizing: border-box;
+}
+
+.tj-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: 18px 16px 0;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.tj-card {
+  width: min(360px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 14px 0 rgba(0, 0, 0, 0.14);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.tj-backBtn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  color: #111;
+}
+
+.tj-title {
+  margin-top: 22px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #2aa6a0;
+}
+
+.tj-desc {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.tj-label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #111;
+}
+
+.tj-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.tj-primaryBtn {
+  width: 100%;
+  height: 44px;
+  margin-top: 18px;
+  background: #2aa6a0;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.18);
+}
+.tj-primaryBtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
+}
+
+.tj-teamInfo {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e7e7e7;
+  border-radius: 12px;
+  background: #f3f3f3;
+}
+
+.tj-teamName {
+  font-size: 13px;
+  font-weight: 900;
+  color: #111;
+}
+
+.tj-teamPeriod {
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.tj-members {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.tj-memberCard {
+  background: #fff;
+  border: 1px solid #e7e7e7;
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tj-memberName {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #111;
+  text-align: center;
+}
+
+.tj-charStage {
+  width: 72px;
+  height: 72px;
+  position: relative;
+}
+
+.tj-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.tj-charFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: #f8f8f8;
+  border: 1px solid #e7e7e7;
+}
+
+.tj-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.tj-ghostBtn {
+  flex: 1;
+  height: 44px;
+  background: #d9d9d9;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tj-note {
+  margin-top: 10px;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.4;
+}
+
+.tj-muted {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.tj-error {
+  font-size: 12px;
+  color: #b00020;
+}

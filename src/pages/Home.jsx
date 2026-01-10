@@ -8,6 +8,7 @@ import Navbar from "../components/Navbar.jsx";
 import WeeklyAchievementModal from "../components/WeeklyAchievementModal.jsx";
 import CoinPopup from "../components/CoinPopup.jsx";
 import BadgePopup from "../components/BadgePopup.jsx";
+import MonthProjects from "../components/MonthProjects.jsx";
 
 import { getMyCharacter, getCalendarStats, http } from "../services/api.js";
 import { AUTH_TOKEN_KEY } from "../config.js";
@@ -341,7 +342,7 @@ export default function Home() {
     try {
       // 오늘 날짜의 floors 가져오기
       const todayFloors = await getFloorsStatusByDate(todayStr);
-      
+
       // 모든 일정 가져오기 (미달성 퀘스트를 위해)
       const allSchedules = await getSchedules({ year, month });
 
@@ -368,46 +369,61 @@ export default function Home() {
             try {
               const detail = await getSchedule(schedule.scheduleId);
               const startDate = detail.startDate;
-              
+
               // 오늘 날짜가 startDate로부터 몇 번째 날인지 계산
               const start = new Date(startDate);
               const target = new Date(todayStr);
               start.setHours(0, 0, 0, 0);
               target.setHours(0, 0, 0, 0);
-              const daysDiff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
-              
-              // 오늘 날짜에 해당하는 floor만 필터링
-              const todayFloor = schedule.floors.find((f, index) => {
-                // floor의 순서를 기반으로 날짜 매칭
-                return index === daysDiff || (daysDiff >= 0 && daysDiff < schedule.floors.length && index === daysDiff);
-              }) || schedule.floors[0]; // 매칭되는 것이 없으면 첫 번째 floor 사용
+              const daysDiff = Math.floor(
+                (target - start) / (1000 * 60 * 60 * 24)
+              );
 
-              const subtasks = [{
-                id: todayFloor.floorId || `sub-${schedule.scheduleId}-0`,
-                floorId: todayFloor.floorId,
-                scheduleId: schedule.scheduleId,
-                text: todayFloor.title || todayFloor.floorTitle || `단계 1`,
-                done: todayFloor.completed || false,
-                dayNumber: daysDiff + 1,
-              }];
+              // 오늘 날짜에 해당하는 floor만 필터링
+              const todayFloor =
+                schedule.floors.find((f, index) => {
+                  // floor의 순서를 기반으로 날짜 매칭
+                  return (
+                    index === daysDiff ||
+                    (daysDiff >= 0 &&
+                      daysDiff < schedule.floors.length &&
+                      index === daysDiff)
+                  );
+                }) || schedule.floors[0]; // 매칭되는 것이 없으면 첫 번째 floor 사용
+
+              const subtasks = [
+                {
+                  id: todayFloor.floorId || `sub-${schedule.scheduleId}-0`,
+                  floorId: todayFloor.floorId,
+                  scheduleId: schedule.scheduleId,
+                  text: todayFloor.title || todayFloor.floorTitle || `단계 1`,
+                  done: todayFloor.completed || false,
+                  dayNumber: daysDiff + 1,
+                },
+              ];
 
               return {
                 id: schedule.scheduleId?.toString() || `task-${Date.now()}`,
                 title: schedule.title,
-                progress: `${subtasks.filter((s) => s.done).length}/${subtasks.length}`,
+                progress: `${subtasks.filter((s) => s.done).length}/${
+                  subtasks.length
+                }`,
                 subtasks,
                 color: schedule.color,
                 startDate: detail.startDate,
                 endDate: detail.endDate,
               };
             } catch (err) {
-              console.warn(`Schedule ${schedule.scheduleId} 상세 정보 로드 실패:`, err);
+              console.warn(
+                `Schedule ${schedule.scheduleId} 상세 정보 로드 실패:`,
+                err
+              );
               return null;
             }
           })
         );
 
-        const validTodayTasks = todayTasks.filter(t => t !== null);
+        const validTodayTasks = todayTasks.filter((t) => t !== null);
         setTasks(validTodayTasks);
 
         // 미달성 퀘스트 찾기 (과거 날짜에 있지만 완료되지 않은 계획)
@@ -419,22 +435,25 @@ export default function Home() {
               const startDate = new Date(detail.startDate);
               const endDate = new Date(detail.endDate);
               const todayDate = new Date(todayStr);
-              
+
               // 과거 날짜에 있는 계획인지 확인
               if (endDate < todayDate) {
                 // 과거 계획의 모든 floors 가져오기
                 const floors = detail.floors || [];
-                const undoneFloors = floors.filter(f => !f.completed);
-                
+                const undoneFloors = floors.filter((f) => !f.completed);
+
                 if (undoneFloors.length > 0) {
                   // 과거 날짜 계산
                   const undoneSubtasks = undoneFloors.map((floor, index) => {
                     const floorDate = new Date(startDate);
                     floorDate.setDate(startDate.getDate() + index);
-                    const daysDiff = Math.floor((floorDate - startDate) / (1000 * 60 * 60 * 24));
-                    
+                    const daysDiff = Math.floor(
+                      (floorDate - startDate) / (1000 * 60 * 60 * 24)
+                    );
+
                     return {
-                      id: floor.floorId || `sub-${schedule.scheduleId}-${index}`,
+                      id:
+                        floor.floorId || `sub-${schedule.scheduleId}-${index}`,
                       floorId: floor.floorId,
                       scheduleId: schedule.scheduleId,
                       text: floor.title || `단계 ${index + 1}`,
@@ -444,7 +463,7 @@ export default function Home() {
                     };
                   });
 
-                  const doneCount = undoneSubtasks.filter(s => s.done).length;
+                  const doneCount = undoneSubtasks.filter((s) => s.done).length;
                   undoneQuestsList.push({
                     id: schedule.scheduleId?.toString() || `task-${Date.now()}`,
                     title: schedule.title || "제목 없음",
@@ -455,7 +474,10 @@ export default function Home() {
                 }
               }
             } catch (err) {
-              console.warn(`미달성 퀘스트 로드 실패 (${schedule.scheduleId}):`, err);
+              console.warn(
+                `미달성 퀘스트 로드 실패 (${schedule.scheduleId}):`,
+                err
+              );
             }
           }
         }
@@ -468,12 +490,15 @@ export default function Home() {
         const doneSubtasks = validTodayTasks.reduce((sum, task) => {
           return sum + task.subtasks.filter((s) => s.done).length;
         }, 0);
-        
+
         setTodayProgress((prev) => ({
           ...prev,
           total: totalSubtasks,
           done: doneSubtasks,
-          percent: totalSubtasks > 0 ? Math.round((doneSubtasks / totalSubtasks) * 100) : 0,
+          percent:
+            totalSubtasks > 0
+              ? Math.round((doneSubtasks / totalSubtasks) * 100)
+              : 0,
         }));
       } else {
         setTasks([]);
@@ -526,7 +551,6 @@ export default function Home() {
     }
   };
 
-
   return (
     <div className="app home-view">
       <BackButton />
@@ -538,16 +562,16 @@ export default function Home() {
       <div className="elevator-wrapper">
         <div className={`elevator ${isMoving ? "elevator-moving" : ""}`}>
           <div className="floor-indicator-box">
-            <img 
-              src={floorBoardImg} 
+            <img
+              src={floorBoardImg}
               alt="층수 표시판"
               className="floor-indicator-bg"
             />
             <span className="floor-indicator-number">{currentFloor}</span>
           </div>
           <div className="floor-scene">
-            <img 
-              src={backgroundImg} 
+            <img
+              src={backgroundImg}
               alt="배경"
               className="floor-background-img"
             />
