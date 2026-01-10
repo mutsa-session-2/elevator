@@ -22,7 +22,9 @@ import RoomManagement from "./pages/RoomManagement.jsx";
 import MemberRemoval from "./pages/MemberRemoval.jsx";
 import RoomRemoval from "./pages/RoomRemoval.jsx";
 import SpecificTeamPlans from "./pages/SpecificTeamPlans.jsx";
-
+import TeamBoardList from "./pages/TeamBoardList.jsx";
+import TeamBoardDetail from "./pages/TeamBoardDetail.jsx";
+import TeamBoardWrite from "./pages/TeamBoardWrite.jsx";
 export default function App() {
   return (
     <Routes>
@@ -42,7 +44,9 @@ export default function App() {
 
       {/* (선택) 예전 링크도 살리고 싶으면 같이 두기 */}
       <Route path="/joinedteamplace" element={<JoinedTeamPlace />} />
-
+      <Route path="/teamboard/:teamId" element={<TeamBoardList />} />
+      <Route path="/teamboard/:teamId/write" element={<TeamBoardWrite />} />
+      <Route path="/teamboard/:teamId/:boardId" element={<TeamBoardDetail />} />
       {/* ✅ teamId를 URL로 들고 다니기 */}
       <Route path="/teamplacehome/:teamId" element={<TeamPlaceHome />} />
       <Route path="/roommanagement/:teamId" element={<RoomManagement />} />

@@ -1,0 +1,177 @@
+/* 헤더/목록 스타일 재사용 */
+@import "./TeamBoardList.css";
+
+.tp-board-detail-page {
+  min-height: 100vh;
+  background: #6f868a;
+  padding-bottom: 88px;
+}
+
+.tp-post-card {
+  background: #f4f4f4;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  padding: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tp-post-top {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.tp-post-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tp-post-author {
+  font-size: 14px;
+  font-weight: 900;
+  color: #111;
+}
+
+.tp-post-date {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.tp-like-pill {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.08);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 900;
+}
+
+.tp-like-pill.is-liked {
+  background: rgba(217, 40, 40, 0.12);
+  color: #d92828;
+}
+
+.tp-like-count {
+  font-size: 12px;
+}
+
+.tp-post-body {
+  margin-top: 10px;
+  padding: 10px 2px 2px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.tp-comment-box {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 78px;
+  gap: 10px;
+  align-items: center;
+}
+
+.tp-comment-input {
+  height: 32px;
+  border-radius: 10px;
+  border: 0;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.7);
+  font-weight: 800;
+  outline: none;
+}
+
+.tp-comment-send {
+  height: 32px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--brand-teal);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tp-comment-send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tp-comments {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.tp-empty-dark {
+  padding: 10px 4px;
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.tp-error-dark {
+  padding: 10px 4px;
+  color: rgba(220, 38, 38, 0.92);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.tp-comment-item {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.tp-avatar-sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tp-comment-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tp-comment-author {
+  font-size: 12px;
+  font-weight: 900;
+  color: #111;
+}
+
+.tp-comment-date {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.tp-comment-text {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.3;
+  white-space: pre-wrap;
+}

@@ -1,0 +1,173 @@
+.tp-board-page {
+  min-height: 100vh;
+  background: #6f868a;
+  padding-bottom: 88px;
+}
+
+.tp-board-header {
+  background: var(--brand-teal);
+  height: 72px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 14px 10px;
+  box-sizing: border-box;
+}
+
+.tp-board-header-inner {
+  width: min(420px, 92vw);
+  margin: 0 auto;
+}
+
+.tp-board-title-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 108px;
+  align-items: center;
+  gap: 10px;
+}
+
+.tp-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tp-board-subtitle-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.tp-board-subtitle-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.tp-write-btn {
+  height: 36px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tp-board-content {
+  width: min(420px, 92vw);
+  margin: 12px auto 0;
+}
+
+.tp-empty {
+  padding: 14px 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.tp-error {
+  padding: 14px 6px;
+  color: rgba(255, 230, 230, 0.95);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.tp-board-list {
+  display: grid;
+  gap: 12px;
+}
+
+.tp-board-card {
+  background: #f4f4f4;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tp-board-card-top {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.tp-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tp-board-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-board-author {
+  font-size: 14px;
+  font-weight: 900;
+  color: #111;
+}
+
+.tp-board-date {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.tp-board-text {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tp-board-card-bottom {
+  margin-top: 10px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.tp-react-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 900;
+}
+
+.tp-react-static {
+  cursor: default;
+}
+
+.tp-react-btn.is-liked {
+  color: #d92828;
+}
+
+.tp-react-count {
+  font-size: 12px;
+}

@@ -657,7 +657,12 @@ export default function TeamPlaceHome() {
         >
           팀 캘린더
         </button>
-        <button className="teamplace-btn">팀 게시판</button>
+        <button
+          className="teamplace-btn"
+          onClick={() => navigate(`/teamboard/${teamId}`)}
+        >
+          팀 게시판
+        </button>
       </div>
 
       <QuestList
