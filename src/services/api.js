@@ -138,3 +138,10 @@ export async function updateSchedule(id, data) {
 export async function updateFloor(id, data) {
   return await http.patch(`/api/floors/${id}`, data);
 }
+
+// Floor 추가 API
+// POST /api/floors
+// Body: { scheduleId, title, scheduledDate }
+export async function createFloor(data) {
+  return await http.post(`/api/floors`, data);
+}
