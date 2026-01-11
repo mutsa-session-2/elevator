@@ -1,7 +1,11 @@
+/* ✅ TeamBoardList.css - 최종 복붙 */
+
+/* (가로 스크롤/와리가리 방지 안전장치) */
 .tp-board-page {
   min-height: 100vh;
   background: #6f868a;
   padding-bottom: 88px;
+  overflow-x: hidden;
 }
 
 .tp-board-header {
@@ -13,8 +17,9 @@
   box-sizing: border-box;
 }
 
+/* ✅ 리스트 본문 폭과 맞추기 (420 -> 500) */
 .tp-board-header-inner {
-  width: min(420px, 92vw);
+  width: min(500px, 92vw);
   margin: 0 auto;
 }
 
@@ -63,9 +68,16 @@
   cursor: pointer;
 }
 
+/* ✅ 여기 중요:
+   - vw/100vw 쓰면 가로 스크롤 유발 가능
+   - width:100% + max-width + padding 으로 안정화
+*/
 .tp-board-content {
-  width: min(420px, 92vw);
+  width: 100%;
+  max-width: 500px;
   margin: 12px auto 0;
+  padding: 0 16px; /* 좌우 여백 */
+  box-sizing: border-box;
 }
 
 .tp-empty {
@@ -94,6 +106,10 @@
   padding: 12px;
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.08);
+
+  /* ✅ 카드가 컨테이너 폭 꽉 차도록(명시) */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tp-board-card-top {
@@ -115,18 +131,30 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  /* ✅ 아주 긴 닉네임/날짜 때문에 레이아웃 밀리는 것 방지 */
+  min-width: 0;
 }
 
 .tp-board-author {
   font-size: 14px;
   font-weight: 900;
   color: #111;
+
+  /* ✅ 줄임표가 필요할 때만 나오게 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tp-board-date {
   font-size: 11px;
   font-weight: 800;
   color: rgba(0, 0, 0, 0.45);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tp-board-text {
@@ -135,10 +163,12 @@
   font-weight: 800;
   color: rgba(0, 0, 0, 0.55);
   line-height: 1.25;
+
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin-left: calc(44px + 10px);
 }
 
 .tp-board-card-bottom {
@@ -146,6 +176,7 @@
   display: flex;
   gap: 14px;
   align-items: center;
+  margin-left: calc(44px + 10px);
 }
 
 .tp-react-btn {
@@ -170,4 +201,40 @@
 
 .tp-react-count {
   font-size: 12px;
+}
+
+/* ===========================
+   ✅ List 전용 강제 오버라이드 (중요)
+   - Detail.css의 .tp-board-content가 덮어쓰는 문제 해결
+   =========================== */
+
+.tp-board-page {
+  overflow-x: hidden;
+}
+
+.tp-board-page,
+.tp-board-page * {
+  box-sizing: border-box;
+}
+
+/* 헤더 폭도 리스트 기준으로 */
+.tp-board-page .tp-board-header-inner {
+  width: min(500px, 92vw) !important;
+  margin: 0 auto !important;
+}
+
+/* ✅ 핵심: Detail.css의 .tp-board-content(display:flex 등) 무력화 */
+.tp-board-page .tp-board-content {
+  width: 100% !important;
+  max-width: 500px !important;
+  margin: 12px auto 0 !important;
+  padding: 0 16px !important;
+
+  display: block !important; /* flex 덮어쓰기 */
+  justify-content: initial !important; /* flex 덮어쓰기 */
+}
+
+/* 카드가 컨테이너 폭 꽉 차게 */
+.tp-board-page .tp-board-card {
+  width: 100% !important;
 }

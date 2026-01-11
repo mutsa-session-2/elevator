@@ -13,7 +13,7 @@ import {
 } from "../services/teamBoard.js";
 import { http } from "../services/api.js";
 
-// ✅ (선택) 기본 바디가 필요하면 아래 파일이 프로젝트에 있어야 함
+// ✅ 기본 바디
 import baseChar from "../assets/ch/cha_1.png";
 
 function toNum(v, fallback = 0) {
@@ -54,7 +54,7 @@ function formatKDateTime(value) {
   const dd = String(d.getDate()).padStart(2, "0");
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yy}.${mm}.${dd}. ${hh}:${mi}`;
+  return `${yy}.${mm}.${dd}.`;
 }
 
 const BASE_W = 114;
@@ -130,11 +130,10 @@ function computeBBox(layers) {
   return { minX, minY, w: Math.max(w, BASE_W), h: Math.max(h, BASE_H) };
 }
 
-// ✅ iOS에서 overflow+borderRadius+transform 조합으로 이미지가 통째로 안 보이는 버그가 있어서
-// transform(scale/translate)을 쓰지 않고 "좌표/크기 자체를 스케일링"해서 배치한다.
+// ✅ (중요) 스케일링 로직 절대 건드리지 않음: transform 미사용, 좌표/크기 자체를 스케일링
 const CharacterAvatar = memo(function CharacterAvatar({
   className,
-  size = 44,
+  size = 48,
   member,
   badgeMember,
 }) {
@@ -167,7 +166,8 @@ const CharacterAvatar = memo(function CharacterAvatar({
         overflow: "hidden",
         position: "relative",
         flex: "0 0 auto",
-        background: "rgba(255,255,255,0.15)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.10)",
       }}
       aria-hidden="true"
     >
@@ -380,7 +380,6 @@ export default function TeamBoardDetail() {
   const onToggleLike = async () => {
     if (!post) return;
 
-    // 낙관적 업데이트
     setPost((prev) => {
       if (!prev) return prev;
       const nowLiked = !!(
@@ -410,7 +409,6 @@ export default function TeamBoardDetail() {
         );
       }
     } catch (_) {
-      // 실패 롤백 (다시 토글)
       setPost((prev) => {
         if (!prev) return prev;
         const nowLiked = !!(
@@ -481,60 +479,67 @@ export default function TeamBoardDetail() {
         ) : err ? (
           <div className="tp-error">{err}</div>
         ) : (
-          <div className="tp-post-card">
-            <div className="tp-post-top">
-              {/* ✅ 게시글 작성자 캐릭터 프리뷰 */}
-              <CharacterAvatar
-                className="tp-avatar"
-                size={44}
-                member={postMember}
-                badgeMember={postBadgeMember}
-              />
+          <div className="tp-post-card tp-figma-frame">
+            {/* ====== (1) 게시글 헤더 ====== */}
+            <CharacterAvatar
+              className="tp-figma-post-avatar"
+              size={48}
+              member={postMember}
+              badgeMember={postBadgeMember}
+            />
 
-              <div className="tp-post-meta">
-                <div className="tp-post-author">{vm.writerName}</div>
-                <div className="tp-post-date">
-                  {formatKDateTime(vm.createdAt)}
-                </div>
-              </div>
-
-              <button
-                className={`tp-like-pill ${vm.liked ? "is-liked" : ""}`}
-                onClick={onToggleLike}
-                type="button"
-                aria-label="좋아요"
-              >
-                <HeartIcon filled={vm.liked} className="tp-icon" />
-                <span className="tp-like-count">{vm.likeCount}</span>
-              </button>
+            <div className="tp-figma-post-author">{vm.writerName}</div>
+            <div className="tp-figma-post-date">
+              {formatKDateTime(vm.createdAt)}
             </div>
 
-            <div className="tp-post-body">{vm.content || "내용이 없어요."}</div>
+            <button
+              className={`tp-like-pill tp-figma-like ${
+                vm.liked ? "is-liked" : ""
+              }`}
+              onClick={onToggleLike}
+              type="button"
+              aria-label="좋아요"
+            >
+              <HeartIcon filled={vm.liked} className="tp-like-icon" />
+              <span className="tp-like-count">{vm.likeCount}</span>
+            </button>
 
-            <div className="tp-comment-box">
+            {/* ====== (2) 게시글 본문 박스 ====== */}
+            <div className="tp-figma-post-body-box">
+              <div className="tp-figma-post-body-text">
+                {vm.content || "내용이 없어요."}
+              </div>
+            </div>
+
+            {/* ====== (3) 댓글 입력 ====== */}
+            <div className="tp-figma-comment-input-frame">
               <input
-                className="tp-comment-input"
+                className="tp-figma-comment-input"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="댓글을 입력하세요"
                 onKeyDown={(e) => e.key === "Enter" && onSendComment()}
               />
               <button
-                className="tp-comment-send"
+                className="tp-figma-comment-send"
                 onClick={onSendComment}
                 disabled={sending}
               >
-                {sending ? "..." : "댓글쓰기"}
+                {sending ? "..." : "댓글 남기기"}
               </button>
             </div>
 
-            <div className="tp-comments">
+            {/* ====== (4) 댓글 리스트 영역 (스크롤) ====== */}
+            <div className="tp-figma-comments-area">
               {commentsLoading ? (
-                <div className="tp-empty-dark">댓글 불러오는 중...</div>
+                <div className="tp-figma-state">댓글 불러오는 중...</div>
               ) : commentsErr ? (
-                <div className="tp-error-dark">{commentsErr}</div>
+                <div className="tp-figma-state tp-figma-state-error">
+                  {commentsErr}
+                </div>
               ) : comments.length === 0 ? (
-                <div className="tp-empty-dark">첫 댓글을 남겨보세요.</div>
+                <div className="tp-figma-state">첫 댓글을 남겨보세요.</div>
               ) : (
                 comments.map((c, idx) => {
                   const cid = c.commentId ?? c.id ?? idx;
@@ -547,24 +552,18 @@ export default function TeamBoardDetail() {
                   const bm = resolveBadgeMember(authorId, author);
 
                   return (
-                    <div className="tp-comment-item" key={cid}>
-                      {/* ✅ 댓글 작성자 캐릭터 프리뷰 */}
+                    <div className="tp-figma-comment-card" key={cid}>
                       <CharacterAvatar
-                        className="tp-avatar-sm"
-                        size={34}
+                        className="tp-figma-comment-avatar"
+                        size={48}
                         member={cm}
                         badgeMember={bm}
                       />
-
-                      <div className="tp-comment-main">
-                        <div className="tp-comment-head">
-                          <div className="tp-comment-author">{author}</div>
-                          <div className="tp-comment-date">
-                            {formatKDateTime(createdAt)}
-                          </div>
-                        </div>
-                        <div className="tp-comment-text">{content}</div>
+                      <div className="tp-figma-comment-author">{author}</div>
+                      <div className="tp-figma-comment-date">
+                        {formatKDateTime(createdAt)}
                       </div>
+                      <div className="tp-figma-comment-text">{content}</div>
                     </div>
                   );
                 })

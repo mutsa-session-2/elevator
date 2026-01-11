@@ -153,9 +153,11 @@ export default function JoinedTeamPlace() {
         .joined-teamplace .teamplace-teamcard-mid{
           flex: 1;
           display: flex;
-          align-items: flex-end;
-          justify-content: flex-end;
-          padding: 0 14px 6px;
+          align-items: flex-start;
+          justify-content: flex-start;
+          margin-left:10px;
+          padding-top:15px;
+          min-height:0;
         }
 
         .joined-teamplace .teamplace-teamcard-bottom{
@@ -170,12 +172,14 @@ export default function JoinedTeamPlace() {
           color: rgba(0,0,0,0.55);
         }
 
-        /* ✅ 카드 안 우측 “게시판” 버튼 */
+        /* ✅ 카드 안 우측 버튼 영역 */
         .joined-teamplace .teamplace-card-actions{
           display: flex;
           gap: 8px;
           align-items: center;
         }
+
+        /* ✅ (기존) 미니 버튼 */
         .joined-teamplace .teamplace-mini-btn{
           height: 34px;
           padding: 0 12px;
@@ -192,12 +196,46 @@ export default function JoinedTeamPlace() {
           transform: translateY(1px);
         }
 
-        /* ✅ 팀원 캐릭터 프리뷰 영역 */
+        /* ✅ (추가) 스크린샷처럼 "초록색 입장 버튼(→)" */
+        .joined-teamplace .teamplace-enter-btn{
+          width: 56px;
+          padding: 0;
+          border-radius: 12px;
+          background: #1f9a95;   /* 너네 brand-teal 느낌 */
+          color: #fff;
+          font-size: 18px;
+          font-weight: 900;
+        }
+
+        /* ✅✅✅ 팀원 캐릭터 프리뷰: 스와이프(가로 스크롤) 가능하게 */
         .joined-teamplace .teamplace-preview-wrap{
           display:flex;
           align-items: center;
           justify-content: flex-end;
-          min-width: 160px;
+
+          /* 중요: 여기만 스크롤 켜면 됨 */
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-x;
+
+          /* 카드 레이아웃 유지용 */
+          min-width: 0;
+          max-width: 240px; /* 필요하면 200~280 사이에서 조절 */
+
+          padding: 2px 0;
+          scrollbar-width: none; /* firefox */
+        }
+        .joined-teamplace .teamplace-preview-wrap::-webkit-scrollbar{
+          display:none; 
+          
+        }
+
+        /* ✅ TeamCharactersPreview(컴포넌트 하나)가 내용만큼 넓어지게 */
+        .joined-teamplace .teamplace-preview-wrap > *{
+          flex: 0 0 auto;
+          width: max-content;
+          
         }
       `}</style>
 
@@ -247,7 +285,7 @@ export default function JoinedTeamPlace() {
                     <div className="teamplace-teamname">{team.name}</div>
                   </div>
 
-                  {/* ✅✅✅ 연한 회색 본문에 팀원 미리보기 */}
+                  {/* ✅✅✅ 연한 회색 본문에 팀원 미리보기 (스와이프 영역) */}
                   <div
                     className="teamplace-teamcard-mid"
                     onClick={(e) => {
@@ -262,8 +300,8 @@ export default function JoinedTeamPlace() {
                         teamId={team.teamId}
                         fetcher={getTeamCharacters}
                         badgesFetcher={getTeamMembersBadges}
-                        max={4}
-                        scale={0.32}
+                        max={999} // ✅ 4명 고정 제거 → 많아지면 가로로 길어짐(=스와이프 가능)
+                        scale={0.5} // ✅ 스케일링 절대 유지
                         showNames={false}
                       />
                     </div>
@@ -274,18 +312,19 @@ export default function JoinedTeamPlace() {
                       {team.startDate} ~ {team.endDate}
                     </div>
 
-                    {/* ✅ 게시판 연결 (카드 클릭과 충돌 방지) */}
+                    {/* ✅✅✅ "초록 버튼(→)" = 엘베 로직(TeamPlaceHome)로 이동 */}
                     <div className="teamplace-card-actions">
                       <button
                         type="button"
-                        className="teamplace-mini-btn"
+                        className="teamplace-mini-btn teamplace-enter-btn"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          navigate(`/teamboard/${team.teamId}`);
+                          navigate(`/teamplacehome/${team.teamId}`);
                         }}
+                        aria-label="팀플레이스 입장"
                       >
-                        게시판
+                        →
                       </button>
                     </div>
                   </div>
