@@ -67,6 +67,14 @@ export default function JoinedTeamPlace() {
 
       <style>{`
         /* ===== JoinedTeamPlace only (scoped) ===== */
+
+        /* ✅✅✅ 버튼/하얀 컨테이너가 퍼지지 않게 page-content 폭 제한 + 가운데 정렬 */
+        .joined-teamplace .page-content{
+          width: min(420px, 92vw);
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+
         .joined-teamplace .teamplace-actions{
           display:flex;
           gap:20px;
@@ -149,34 +157,72 @@ export default function JoinedTeamPlace() {
           color: #111;
         }
 
-        /* ✅ 연한 회색 본문 영역(미리보기 자리) */
+        /* ✅✅✅ 핵심: 연한(mid) 영역을 "날짜(상단) + 캐릭터(하단)" 구조로 */
         .joined-teamplace .teamplace-teamcard-mid{
           flex: 1;
           display: flex;
-          align-items: flex-start;
+          flex-direction: column;   /* ✅ 날짜 위 / 캐릭터 아래 */
+          align-items: stretch;
           justify-content: flex-start;
-          margin-left:10px;
-          padding-top:15px;
-          min-height:0;
+          gap: 2px;
+          padding: 10px 14px 14px;  /* ✅ 연한 영역 내부 여백 */
+          min-height: 0;
+          box-sizing: border-box;
         }
 
-        .joined-teamplace .teamplace-teamcard-bottom{
-          display:flex;
-          align-items:flex-end;
-          justify-content: space-between;
-          padding: 8px 14px 14px;
-          gap: 10px;
-        }
+        /* ✅ 날짜는 연한 영역 상단 */
         .joined-teamplace .teamplace-period{
-          font-size: 10px;
+          font-size: 9px;
           color: rgba(0,0,0,0.55);
+          line-height: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          min-width: 0;
+          transform: none;          /* ✅ 기존 translateY 제거 */
         }
 
-        /* ✅ 카드 안 우측 버튼 영역 */
-        .joined-teamplace .teamplace-card-actions{
+        /* ✅ 아래쪽: 캐릭터(왼쪽) + → 버튼(오른쪽) 한 줄 */
+        .joined-teamplace .teamplace-mid-row{
+          flex: 1;
           display: flex;
-          gap: 8px;
           align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          min-height: 0;
+        }
+
+        .joined-teamplace .teamplace-mid-row{
+  transform: translateY(15px); /* 6~14px 사이로 조절 */
+}
+        /* ✅✅✅ 팀원 캐릭터 프리뷰: 가로 스크롤(스와이프) */
+        .joined-teamplace .teamplace-preview-wrap{
+          flex: 1;
+          min-width: 0;
+
+          display:flex;
+          align-items: center;
+          justify-content: flex-start;
+
+          overflow-x: auto;               /* ✅ 실제 스와이프/스크롤 */
+          overflow-y: visible;
+           
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-x;
+
+          padding: 2px 0;
+          box-sizing: border-box;
+
+          scrollbar-width: none; /* firefox */
+        }
+        .joined-teamplace .teamplace-preview-wrap::-webkit-scrollbar{
+          display:none; 
+        }
+
+        /* ✅ TeamCharactersPreview(컴포넌트 하나)가 내용만큼 넓어지게 */
+        .joined-teamplace .teamplace-preview-wrap > *{
+          flex: 0 0 auto;
+          width: max-content;
         }
 
         /* ✅ (기존) 미니 버튼 */
@@ -196,47 +242,53 @@ export default function JoinedTeamPlace() {
           transform: translateY(1px);
         }
 
-        /* ✅ (추가) 스크린샷처럼 "초록색 입장 버튼(→)" */
+        /* ✅ 초록색 입장 버튼(→) */
         .joined-teamplace .teamplace-enter-btn{
           width: 56px;
+          height: 34px;
           padding: 0;
           border-radius: 12px;
-          background: #1f9a95;   /* 너네 brand-teal 느낌 */
+          background: #1f9a95;
           color: #fff;
           font-size: 18px;
           font-weight: 900;
-        }
 
-        /* ✅✅✅ 팀원 캐릭터 프리뷰: 스와이프(가로 스크롤) 가능하게 */
-        .joined-teamplace .teamplace-preview-wrap{
-          display:flex;
+          display: flex;
           align-items: center;
-          justify-content: flex-end;
-
-          /* 중요: 여기만 스크롤 켜면 됨 */
-          overflow-x: auto;
-          overflow-y: hidden;
-          -webkit-overflow-scrolling: touch;
-          touch-action: pan-x;
-
-          /* 카드 레이아웃 유지용 */
-          min-width: 0;
-          max-width: 240px; /* 필요하면 200~280 사이에서 조절 */
-
-          padding: 2px 0;
-          scrollbar-width: none; /* firefox */
-        }
-        .joined-teamplace .teamplace-preview-wrap::-webkit-scrollbar{
-          display:none; 
-          
-        }
-
-        /* ✅ TeamCharactersPreview(컴포넌트 하나)가 내용만큼 넓어지게 */
-        .joined-teamplace .teamplace-preview-wrap > *{
+          justify-content: center;
           flex: 0 0 auto;
-          width: max-content;
-          
         }
+
+        /* (기존에 있던 bottom 영역은 이제 안 씀 — 남겨둬도 무방하지만, 실사용은 안 함)
+        .joined-teamplace .teamplace-teamcard-bottom{ ... }
+        */
+       /* 1) 날짜-캐릭터 사이 공백은 최소로 (너가 말한 "위 간격만 넓어짐" 방지) */
+.joined-teamplace .teamplace-teamcard-mid{
+  gap: 4px;              /* 기존 8px면 줄여 */
+  padding-top: 8px;      /* 너무 크면 6~8 */
+}
+
+/* 2) 캐릭터+버튼 줄은 아래로 붙이기 */
+.joined-teamplace .teamplace-mid-row{
+  margin-top: 2px;
+  align-items: flex-end;
+}
+
+/* 3) ✅ 똥 잘림의 진짜 원인 제거: 프리뷰/내부 wrapper overflow 풀고 위 여유 확보 */
+.joined-teamplace .teamplace-preview-wrap{
+  overflow-x: auto;
+  overflow-y: visible;   /* 중요 */
+  padding-top: 10px;     /* 똥 머리 공간 */
+}
+
+.joined-teamplace .teamplace-preview-wrap .cp-wrap{
+  overflow: visible !important; /* 중요: 내부에서 잘리는 경우 */
+}
+
+.joined-teamplace .teamplace-enter-btn{
+  transform: translateY(-12px); /* -4 ~ -10px 사이로 조절 */
+}
+
       `}</style>
 
       <main className="page-content">
@@ -285,7 +337,7 @@ export default function JoinedTeamPlace() {
                     <div className="teamplace-teamname">{team.name}</div>
                   </div>
 
-                  {/* ✅✅✅ 연한 회색 본문에 팀원 미리보기 (스와이프 영역) */}
+                  {/* ✅✅✅ 연한(mid) 영역: 상단 날짜 + 하단 캐릭터 */}
                   <div
                     className="teamplace-teamcard-mid"
                     onClick={(e) => {
@@ -295,25 +347,24 @@ export default function JoinedTeamPlace() {
                     onKeyDown={(e) => e.stopPropagation()}
                     role="presentation"
                   >
-                    <div className="teamplace-preview-wrap">
-                      <TeamCharactersPreview
-                        teamId={team.teamId}
-                        fetcher={getTeamCharacters}
-                        badgesFetcher={getTeamMembersBadges}
-                        max={999} // ✅ 4명 고정 제거 → 많아지면 가로로 길어짐(=스와이프 가능)
-                        scale={0.5} // ✅ 스케일링 절대 유지
-                        showNames={false}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="teamplace-teamcard-bottom">
+                    {/* ✅ 연한 부분 상단에 날짜 */}
                     <div className="teamplace-period">
                       {team.startDate} ~ {team.endDate}
                     </div>
 
-                    {/* ✅✅✅ "초록 버튼(→)" = 엘베 로직(TeamPlaceHome)로 이동 */}
-                    <div className="teamplace-card-actions">
+                    {/* ✅ 연한 부분 아래쪽에 캐릭터 + → */}
+                    <div className="teamplace-mid-row">
+                      <div className="teamplace-preview-wrap">
+                        <TeamCharactersPreview
+                          teamId={team.teamId}
+                          fetcher={getTeamCharacters}
+                          badgesFetcher={getTeamMembersBadges}
+                          max={999}
+                          scale={0.5}
+                          showNames={false}
+                        />
+                      </div>
+
                       <button
                         type="button"
                         className="teamplace-mini-btn teamplace-enter-btn"

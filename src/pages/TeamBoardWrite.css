@@ -76,3 +76,15 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ✅ 추가: TeamHeader가 fixed/sticky로 떠있어도,
+   이 페이지(tp-write-page)에서는 “흐름대로” 들어가게 해서
+   아래 '글 작성하기' 헤더가 그만큼 자연스럽게 내려오게 함 */
+.tp-write-page .home-header.plan-header {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  margin: 0 !important;
+}

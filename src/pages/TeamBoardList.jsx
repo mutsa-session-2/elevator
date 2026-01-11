@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import TeamHeader from "../components/TeamHeader.jsx";
 import "../App.css";
 import "./TeamBoardList.css";
 
@@ -403,6 +404,10 @@ export default function TeamBoardList() {
 
   return (
     <div className="tp-board-page">
+      {/* ✅ TeamHeader(팀 플랜) = 위에 */}
+      <TeamHeader />
+
+      {/* ✅ 기존 헤더(팀 게시판/멘트/글 작성/뒤로) = 아래 회색 바로 */}
       <div className="tp-board-header">
         <div className="tp-board-header-inner">
           <div className="tp-board-title-row">

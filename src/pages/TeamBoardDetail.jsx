@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import TeamHeader from "../components/TeamHeader.jsx";
 import "../App.css";
 import "./TeamBoardDetail.css";
 
@@ -452,6 +453,9 @@ export default function TeamBoardDetail() {
 
   return (
     <div className="tp-board-detail-page">
+      {/* ✅ 추가: 상단 TeamHeader */}
+      <TeamHeader />
+
       <div className="tp-board-header">
         <div className="tp-board-header-inner">
           <div className="tp-board-title-row">
@@ -463,10 +467,8 @@ export default function TeamBoardDetail() {
               ‹
             </button>
             <div className="tp-board-subtitle">
-              <div className="tp-board-subtitle-title">팀 게시판</div>
-              <div className="tp-board-subtitle-desc">
-                팀원들과 소통해보세요.
-              </div>
+              <div className="tp-board-subtitle-title"></div>
+              {/* ✅ 여기서만 삭제: tp-board-subtitle-desc(소통 멘트) */}
             </div>
             <div />
           </div>

@@ -8,39 +8,60 @@
   overflow-x: hidden;
 }
 
-.tp-board-header {
-  background: var(--brand-teal);
-  height: 72px;
-  display: flex;
-  align-items: flex-end;
-  padding: 0 14px 10px;
-  box-sizing: border-box;
+/* ✅ TeamHeader(팀 플랜) + 아래 회색 바가 “피그마처럼” 붙어서 보이게 */
+/* (TeamHeader가 다른 곳에서 fixed/sticky로 잡혀있어도 이 페이지에서 흐름 유지) */
+.tp-board-page .home-header.plan-header {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  z-index: auto;
+  margin: 0;
 }
 
-/* ✅ 리스트 본문 폭과 맞추기 (420 -> 500) */
+/* ✅ 두 번째 바(팀 게시판/글작성/멘트) = 회색 바 */
+.tp-board-header {
+  background: transparent;
+  height: auto;
+  display: block;
+  padding: 12px 0 12px;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+/* ✅ 리스트 본문 폭과 정확히 맞추기 */
 .tp-board-header-inner {
-  width: min(500px, 92vw);
+  width: 100%;
+  max-width: 500px;
   margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .tp-board-title-row {
   display: grid;
-  grid-template-columns: 36px 1fr 108px;
+  grid-template-columns: 28px 1fr 120px;
   align-items: center;
   gap: 10px;
 }
 
+/* ✅ 피그마처럼 “박스 없이” 화살표만 */
 .tp-back-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   border: 0;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.95);
   font-size: 26px;
   font-weight: 900;
   cursor: pointer;
   line-height: 1;
+  padding: 0;
+}
+
+.tp-back-btn:active {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .tp-board-subtitle-title {
@@ -57,15 +78,22 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
+/* ✅ 피그마처럼 버튼이 “회색 바 안에서” 약간 더 두툼하게 */
 .tp-write-btn {
-  height: 36px;
-  border-radius: 10px;
+  height: 44px;
+  border-radius: 12px;
   border: 2px solid rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.12);
+  background: #2a9699;
   color: #fff;
   font-weight: 900;
   font-size: 12px;
   cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
+}
+
+.tp-write-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
 }
 
 /* ✅ 여기 중요:
@@ -219,8 +247,10 @@
 
 /* 헤더 폭도 리스트 기준으로 */
 .tp-board-page .tp-board-header-inner {
-  width: min(500px, 92vw) !important;
+  width: 100% !important;
+  max-width: 500px !important;
   margin: 0 auto !important;
+  padding: 0 16px !important;
 }
 
 /* ✅ 핵심: Detail.css의 .tp-board-content(display:flex 등) 무력화 */

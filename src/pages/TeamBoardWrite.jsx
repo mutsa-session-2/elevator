@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import TeamHeader from "../components/TeamHeader.jsx";
 import "../App.css";
 import "./TeamBoardWrite.css";
 
@@ -36,6 +37,10 @@ export default function TeamBoardWrite() {
 
   return (
     <div className="tp-write-page">
+      {/* ✅ 추가: 상단 TeamHeader (팀 플랜) */}
+      <TeamHeader />
+
+      {/* ✅ 기존 헤더(글 작성하기/설명/뒤로가기)는 그대로 아래로 내려옴 */}
       <div className="tp-board-header">
         <div className="tp-board-header-inner">
           <div className="tp-write-title-row">
