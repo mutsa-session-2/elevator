@@ -4,14 +4,20 @@ import Navbar from "../components/Navbar.jsx";
 import TeamHeader from "../components/TeamHeader.jsx";
 import "./TeamCreate.css";
 
-import { createTeam } from "../services/team.js";
+import { createTeam, getTeamCharacters } from "../services/team.js";
 import {
   getStoreItems,
   getMyEquippedItems,
   getMyItems, // ✅ [추가] store 403 대비용
 } from "../services/store.js";
 import { getMyCharacter } from "../services/character.js";
-import { getMyEquippedBadges } from "../services/badge.js";
+import {
+  getMyEquippedBadges,
+  getTeamMembersBadges,
+} from "../services/badge.js";
+
+// ✅ 팀원 캐릭터 프리뷰 컴포넌트(팀 API 기반 프리뷰 재사용)
+import { TeamCharactersPreview } from "../components/CharacterPreview.jsx";
 
 function pick(obj, ...keys) {
   for (const k of keys) {
@@ -33,7 +39,20 @@ function toNum(v) {
   return null;
 }
 
-// ✅ [수정] imgUrl 키 다양화 + nested(item/badge) 대응
+// ✅ 기준 좌표계(팀 프리뷰와 동일하게)
+const BASE_W = 114;
+const BASE_H = 126;
+
+// ✅ 상대경로 보정
+function normalizeUrlStr(v) {
+  if (typeof v !== "string") return "";
+  const u = v.trim();
+  if (!u) return "";
+  if (u.startsWith("http") || u.startsWith("/")) return u;
+  return `/${u}`;
+}
+
+// ✅ imgUrl 키 다양화 + nested(item/badge) 대응 + 상대경로 보정
 function pickImgUrl(obj, depth = 0) {
   if (!obj || depth > 2) return "";
 
@@ -52,9 +71,8 @@ function pickImgUrl(obj, depth = 0) {
     obj?.image ??
     null;
 
-  if (typeof v === "string" && v.trim()) return v.trim();
+  if (typeof v === "string" && v.trim()) return normalizeUrlStr(v);
 
-  // nested 흔한 케이스들
   const nested =
     obj?.item ?? obj?.itemDto ?? obj?.itemInfo ?? obj?.badge ?? obj?.badgeDto;
   if (nested) return pickImgUrl(nested, depth + 1);
@@ -62,38 +80,30 @@ function pickImgUrl(obj, depth = 0) {
   return "";
 }
 
+// ✅ meta nested 구조까지 제대로 반영해서 width/height/offset이 "원본 이미지 크기"로 튀는 것 방지
 function buildLayerStyle(raw, meta) {
+  const m = meta?.item ?? meta?.itemDto ?? meta?.itemInfo ?? meta ?? null;
+
   const x = toNum(
-    pick(
-      raw,
-      "offsetX",
-      "offset_x",
-      "x",
-      "left",
-      "posX",
-      "positionX",
-      meta?.offsetX,
-      meta?.offset_x,
-      meta?.x
-    )
+    pick(raw, "offsetX", "offset_x", "x", "left", "posX", "positionX") ??
+      pick(m, "offsetX", "offset_x", "x", "left", "posX", "positionX")
   );
   const y = toNum(
-    pick(
-      raw,
-      "offsetY",
-      "offset_y",
-      "y",
-      "top",
-      "posY",
-      "positionY",
-      meta?.offsetY,
-      meta?.offset_y,
-      meta?.y
-    )
+    pick(raw, "offsetY", "offset_y", "y", "top", "posY", "positionY") ??
+      pick(m, "offsetY", "offset_y", "y", "top", "posY", "positionY")
   );
-  const w = toNum(pick(raw, "width", "w", "itemWidth", meta?.width));
-  const h = toNum(pick(raw, "height", "h", "itemHeight", meta?.height));
-  const s = toNum(pick(raw, "scale", "size", "ratio", meta?.scale, meta?.size));
+
+  const w = toNum(
+    pick(raw, "width", "w", "itemWidth") ?? pick(m, "width", "w", "itemWidth")
+  );
+  const h = toNum(
+    pick(raw, "height", "h", "itemHeight") ??
+      pick(m, "height", "h", "itemHeight")
+  );
+
+  const s = toNum(
+    pick(raw, "scale", "size", "ratio") ?? pick(m, "scale", "size", "ratio")
+  );
   const scale = s == null ? null : s > 10 ? s / 100 : s;
 
   const style = {};
@@ -101,14 +111,17 @@ function buildLayerStyle(raw, meta) {
   if (y != null) style.top = `${y}px`;
   if (w != null && w > 3) style.width = `${w}px`;
   if (h != null && h > 3) style.height = `${h}px`;
+
+  // width/height 없고 scale만 있을 때 대응
   if ((w == null || h == null) && scale != null && scale !== 1) {
     style.transform = `scale(${scale})`;
     style.transformOrigin = "top left";
   }
+
   return style;
 }
 
-// ✅ [수정] equippedItems / equippedBadges 같은 키도 대응
+// ✅ equippedItems / equippedBadges 같은 키도 대응
 function normalizeList(raw) {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.data)) return raw.data;
@@ -120,32 +133,128 @@ function normalizeList(raw) {
   return [];
 }
 
-function MyCharacterPreview({ accessoryMetaById }) {
+// ✅ TeamCreate 결과 화면용 로컬 캔버스(114x126 좌표계에서 합성) → CSS 늘림 때문에 깨지는 것 방지
+function LocalCharacterCanvas({
+  baseUrl,
+  layers = [],
+  scale = 1,
+  title = "my",
+}) {
+  const wrapStyle = {
+    width: `${BASE_W * scale}px`,
+    height: `${BASE_H * scale}px`,
+    position: "relative",
+    overflow: "hidden",
+  };
+
+  const stageStyle = {
+    width: `${BASE_W}px`,
+    height: `${BASE_H}px`,
+    position: "absolute",
+    left: 0,
+    top: 0,
+    transform: `scale(${scale})`,
+    transformOrigin: "top left",
+  };
+
+  const baseStyle = {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: `${BASE_W}px`,
+    height: `${BASE_H}px`,
+    objectFit: "contain",
+    imageRendering: "pixelated",
+    userSelect: "none",
+    pointerEvents: "none",
+  };
+
+  return (
+    <div style={wrapStyle} title={title}>
+      <div style={stageStyle}>
+        {baseUrl ? (
+          <img
+            src={baseUrl}
+            alt="base"
+            style={baseStyle}
+            onError={(e) => (e.currentTarget.style.display = "none")}
+            draggable={false}
+          />
+        ) : (
+          <div style={{ position: "absolute", inset: 0 }} />
+        )}
+
+        {layers.map((l) => (
+          <img
+            key={l.key}
+            src={l.url}
+            alt={l.kind ?? "layer"}
+            style={{
+              position: "absolute",
+              objectFit: "contain",
+              imageRendering: "pixelated",
+              userSelect: "none",
+              pointerEvents: "none",
+              ...l.style,
+            }}
+            onError={(e) => (e.currentTarget.style.display = "none")}
+            draggable={false}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MyCharacterPreview({ accessoryMetaById, teamId }) {
   const [baseUrl, setBaseUrl] = useState("");
   const [itemLayers, setItemLayers] = useState([]);
   const [badgeLayers, setBadgeLayers] = useState([]);
 
   useEffect(() => {
+    // ✅ 팀이 이미 만들어졌으면(result 단계) "팀원 1명 프리뷰"로 보여주기만 하면 됨.
+    // (여기서는 /me/* 호출을 일부러 안 함)
+    if (teamId) return;
+
     let ignore = false;
 
     const run = async () => {
       try {
-        // 베이스(얼굴 포함 합성/혹은 기본 캐릭터)
+        // 1) 내 캐릭터(합성/기본) base 후보
         const c = await getMyCharacter();
-        const base =
-          pick(c, "imageUrl", "characterImageUrl") ||
-          pick(c?.data, "imageUrl", "characterImageUrl") ||
-          pick(c?.result, "imageUrl", "characterImageUrl") ||
-          "";
-        if (!ignore) setBaseUrl(base);
+        const baseFromCharacter =
+          normalizeUrlStr(
+            pick(c, "imageUrl", "characterImageUrl") ||
+              pick(c?.data, "imageUrl", "characterImageUrl") ||
+              pick(c?.result, "imageUrl", "characterImageUrl") ||
+              ""
+          ) || "";
 
-        // ✅ 장착 아이템
+        // 2) 장착 아이템(FACE를 base로 우선)
         const eq = await getMyEquippedItems().catch(() => null);
         const eqList = normalizeList(eq);
 
+        const faceItem = eqList.find((it) => {
+          const inner = it?.item ?? it?.itemDto ?? it?.itemInfo ?? null;
+          const t = String(
+            it.type ?? it.itemType ?? inner?.type ?? inner?.itemType ?? ""
+          ).toUpperCase();
+          return t === "FACE";
+        });
+
+        const faceBaseUrl =
+          pickImgUrl(faceItem) ||
+          pickImgUrl(faceItem?.item) ||
+          pickImgUrl(faceItem?.itemDto) ||
+          pickImgUrl(faceItem?.itemInfo) ||
+          "";
+
+        const finalBase = faceBaseUrl || baseFromCharacter;
+        if (!ignore) setBaseUrl(finalBase);
+
+        // ✅ ACCESSORY 레이어(= FACE 제외)
         const layers = eqList
-          .map((it) => {
-            // ✅ nested(item)도 고려
+          .map((it, idx) => {
             const inner = it?.item ?? it?.itemDto ?? it?.itemInfo ?? null;
 
             const id = Number(
@@ -153,7 +262,6 @@ function MyCharacterPreview({ accessoryMetaById }) {
             );
             if (Number.isNaN(id)) return null;
 
-            // ✅ FACE는 여기서 제외(베이스가 얼굴 포함이거나, 얼굴은 여기서 겹치면 이상해짐)
             const type = String(
               it.type ?? it.itemType ?? inner?.type ?? inner?.itemType ?? ""
             ).toUpperCase();
@@ -161,12 +269,11 @@ function MyCharacterPreview({ accessoryMetaById }) {
 
             const meta = accessoryMetaById?.[id] ?? inner ?? null;
 
-            // ✅ url을 it / inner / meta 순서로 넓게 찾기
             const url = pickImgUrl(it) || pickImgUrl(inner) || pickImgUrl(meta);
             if (!url) return null;
 
             return {
-              key: `it-${id}`,
+              key: `it-${id}-${idx}`,
               url,
               style: buildLayerStyle(it, meta),
             };
@@ -180,7 +287,7 @@ function MyCharacterPreview({ accessoryMetaById }) {
         const bList = normalizeList(b);
 
         const blayers = bList
-          .map((badge) => {
+          .map((badge, idx) => {
             const inner = badge?.badge ?? badge?.badgeDto ?? null;
 
             const id = Number(
@@ -188,12 +295,11 @@ function MyCharacterPreview({ accessoryMetaById }) {
             );
             if (Number.isNaN(id)) return null;
 
-            const url =
-              pickImgUrl(badge) || pickImgUrl(inner) || pickImgUrl(badge);
+            const url = pickImgUrl(badge) || pickImgUrl(inner);
             if (!url) return null;
 
             return {
-              key: `bd-${id}`,
+              key: `bd-${id}-${idx}`,
               url,
               style: buildLayerStyle(badge, inner ?? badge),
             };
@@ -210,37 +316,36 @@ function MyCharacterPreview({ accessoryMetaById }) {
     return () => {
       ignore = true;
     };
-  }, [accessoryMetaById]);
+  }, [accessoryMetaById, teamId]);
 
+  // ✅ result 단계(팀 생성 후): 팀원 API 기반 프리뷰(=팀원 1명)로 렌더
+  if (teamId) {
+    return (
+      <div className="tc-charStage">
+        <TeamCharactersPreview
+          teamId={teamId}
+          fetcher={getTeamCharacters}
+          badgesFetcher={getTeamMembersBadges}
+          max={1}
+          scale={0.7}
+          showNames={false}
+        />
+      </div>
+    );
+  }
+
+  // ✅ form 단계(팀 생성 전): 기존 /me 기반 로컬 합성 프리뷰 유지
   return (
     <div className="tc-charStage">
-      {baseUrl ? (
-        <img className="tc-layer" src={baseUrl} alt="base" />
-      ) : (
-        <div className="tc-charFallback" />
-      )}
-
-      {itemLayers.map((l) => (
-        <img
-          key={l.key}
-          className="tc-layer"
-          src={l.url}
-          style={l.style}
-          alt="item"
-          onError={(e) => (e.currentTarget.style.display = "none")}
-        />
-      ))}
-
-      {badgeLayers.map((l) => (
-        <img
-          key={l.key}
-          className="tc-layer"
-          src={l.url}
-          style={l.style}
-          alt="badge"
-          onError={(e) => (e.currentTarget.style.display = "none")}
-        />
-      ))}
+      <LocalCharacterCanvas
+        baseUrl={baseUrl}
+        layers={[
+          ...itemLayers.map((l) => ({ ...l, kind: "item" })),
+          ...badgeLayers.map((l) => ({ ...l, kind: "badge" })),
+        ]}
+        scale={1}
+        title="my-character"
+      />
     </div>
   );
 }
@@ -265,7 +370,7 @@ export default function TeamCreate() {
     let ignore = false;
     const run = async () => {
       try {
-        // ✅ [핵심 수정] store catalog(ACCESSORY) 403 나도, 내 보유 아이템(myItems)에서 meta 만들기
+        // ✅ store catalog(ACCESSORY) 403 나도, 내 보유 아이템(myItems)에서 meta 만들기
         const [storeRes, myRes] = await Promise.allSettled([
           getStoreItems("ACCESSORY"),
           getMyItems(),
@@ -280,7 +385,9 @@ export default function TeamCreate() {
 
         const map = {};
         merged.forEach((it) => {
-          const id = Number(it.itemId ?? it.id);
+          // ✅ nested(item) 구조까지 id 잡히게 보강
+          const inner = it?.item ?? it?.itemDto ?? it?.itemInfo ?? it;
+          const id = Number(inner?.itemId ?? inner?.id ?? it?.itemId ?? it?.id);
           if (!Number.isNaN(id)) map[id] = it;
         });
 
@@ -347,7 +454,6 @@ export default function TeamCreate() {
 
       setStep("result");
     } catch (e) {
-      // ✅ 상태 보여주면 디버깅 쉬움
       if (e?.status === 401) alert("로그인이 만료됐어요. 다시 로그인해줘!");
       else if (e?.status === 403)
         alert("권한이 없어요(403). 토큰/권한 확인 필요!");
@@ -435,7 +541,10 @@ export default function TeamCreate() {
                 </div>
 
                 <div className="tc-summaryBody">
-                  <MyCharacterPreview accessoryMetaById={accessoryMetaById} />
+                  <MyCharacterPreview
+                    accessoryMetaById={accessoryMetaById}
+                    teamId={result?.teamId}
+                  />
                 </div>
               </div>
 

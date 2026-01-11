@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import TeamHeader from "../components/TeamHeader.jsx";
 import { getTeams } from "../services/api.js";
+import { getTeamMembersBadges } from "../services/badge.js";
 
 // ✅ 팀원 캐릭터 프리뷰 컴포넌트
 import { TeamCharactersPreview } from "../components/CharacterPreview.jsx";
@@ -134,18 +135,30 @@ export default function JoinedTeamPlace() {
           padding: 10px 14px;
           background: rgba(0,0,0,0.07);
           display:flex;
-          justify-content: space-between;
           align-items: center;
           gap: 10px;
         }
         .joined-teamplace .teamplace-teamname{
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           font-size: 18px;
           font-weight: 900;
           color: #111;
         }
 
-        .joined-teamplace .teamplace-teamcard-bottom{
+        /* ✅ 연한 회색 본문 영역(미리보기 자리) */
+        .joined-teamplace .teamplace-teamcard-mid{
           flex: 1;
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-end;
+          padding: 0 14px 6px;
+        }
+
+        .joined-teamplace .teamplace-teamcard-bottom{
           display:flex;
           align-items:flex-end;
           justify-content: space-between;
@@ -179,7 +192,7 @@ export default function JoinedTeamPlace() {
           transform: translateY(1px);
         }
 
-        /* ✅ 팀원 캐릭터 프리뷰 영역(카드 상단 오른쪽) */
+        /* ✅ 팀원 캐릭터 프리뷰 영역 */
         .joined-teamplace .teamplace-preview-wrap{
           display:flex;
           align-items: center;
@@ -232,20 +245,23 @@ export default function JoinedTeamPlace() {
                 >
                   <div className="teamplace-teamcard-top">
                     <div className="teamplace-teamname">{team.name}</div>
+                  </div>
 
-                    {/* ✅✅✅ 팀원 4명 캐릭터 미리보기(카드 클릭 유지, 프리뷰는 클릭 막음) */}
-                    <div
-                      className="teamplace-preview-wrap"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      role="presentation"
-                    >
+                  {/* ✅✅✅ 연한 회색 본문에 팀원 미리보기 */}
+                  <div
+                    className="teamplace-teamcard-mid"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    role="presentation"
+                  >
+                    <div className="teamplace-preview-wrap">
                       <TeamCharactersPreview
                         teamId={team.teamId}
                         fetcher={getTeamCharacters}
+                        badgesFetcher={getTeamMembersBadges}
                         max={4}
                         scale={0.32}
                         showNames={false}

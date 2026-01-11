@@ -30,8 +30,8 @@
 
 .tc-backBtn {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: -7px;
+  left: -5px;
   background: transparent;
   border: none;
   font-size: 22px;
@@ -141,6 +141,10 @@
   display: flex;
   justify-content: flex-start;
 }
+/* 결과 화면 미리보기만 살짝 아래로 (공간 추가 X) */
+.tc-summaryBody .tc-charStage {
+  transform: translateY(9px); /* 6~14px 사이로 취향껏 */
+}
 
 .tc-charStage {
   width: 86px;
@@ -176,38 +180,53 @@
   margin-bottom: 6px;
 }
 
+/* 입장코드 박스(피그마처럼: 한 박스 안에 버튼 들어가기) */
 .tc-joinRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  position: relative;
+  width: 100%;
+  height: 39px;
 }
 
+/* input을 “박스 전체”로 깔고, 오른쪽에 버튼 자리만큼 padding 확보 */
 .tc-joinInput {
-  flex: 1;
-  height: 38px;
-  border: 1px solid #e7e7e7;
+  width: 100%;
+  height: 39px;
+
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
   border-radius: 8px;
-  padding: 0 10px;
+
+  padding-left: 16px;
+  padding-right: 78px; /* ✅ 버튼(61px) + 여백(대략 8~10px*2) 만큼 */
+
   font-family: inherit;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 22px;
+  color: #434343;
+
+  box-sizing: border-box;
+  outline: none;
 }
 
+/* 버튼을 박스 “안쪽 오른쪽”에 절대배치 */
 .tc-copyBtn {
-  height: 38px;
-  padding: 0 12px;
+  position: absolute;
+  right: 8px; /* 피그마 left=218 같은 느낌을 반응형으로 */
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 61px;
+  height: 25px;
+
+  background: #dadada;
   border: none;
-  border-radius: 8px;
-  background: #d9d9d9;
-  font-family: inherit;
-  font-weight: 900;
-  cursor: pointer;
-}
+  border-radius: 4px;
 
-.tc-joinRow {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.tc-copyBtn {
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 12px;
+  color: #000;
+
+  cursor: pointer;
   white-space: nowrap;
 }

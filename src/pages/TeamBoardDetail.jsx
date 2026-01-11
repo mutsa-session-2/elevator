@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import "../App.css";
@@ -11,16 +11,37 @@ import {
   getTeamBoardComments,
   toggleTeamBoardLike,
 } from "../services/teamBoard.js";
+import { http } from "../services/api.js";
+
+// ✅ (선택) 기본 바디가 필요하면 아래 파일이 프로젝트에 있어야 함
+import baseChar from "../assets/ch/cha_1.png";
 
 function toNum(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
+function getUserId(obj) {
+  const v = obj?.userId ?? obj?.userid ?? obj?.writerId ?? obj?.authorId;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function pick(obj, ...keys) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return null;
+}
+
 function normalizeList(raw) {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.comments)) return raw.comments;
   if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.result)) return raw.result;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.members)) return raw.members;
   return [];
 }
 
@@ -35,6 +56,164 @@ function formatKDateTime(value) {
   const mi = String(d.getMinutes()).padStart(2, "0");
   return `${yy}.${mm}.${dd}. ${hh}:${mi}`;
 }
+
+const BASE_W = 114;
+const BASE_H = 126;
+
+const LAYER_ORDER = {
+  CHARACTER: 0,
+  BASE: 0,
+  FACE: 1,
+  ACCESSORY: 2,
+  BADGE: 3,
+};
+
+function layerRank(t) {
+  const key = String(t ?? "").toUpperCase();
+  return LAYER_ORDER[key] ?? 10;
+}
+
+function normalizeLayers(equippedItems, equippedBadges) {
+  const items = Array.isArray(equippedItems) ? equippedItems : [];
+  const badgesRaw = Array.isArray(equippedBadges) ? equippedBadges : [];
+  const badges = badgesRaw
+    .filter((b) => b?.equipped === true)
+    .map((b) => ({ ...b, __layerType: "BADGE" }));
+
+  const merged = [
+    ...items.map((x) => ({ ...x, __layerType: x?.itemType })),
+    ...badges,
+  ];
+
+  const cleaned = merged
+    .map((l) => {
+      const imageUrl = pick(l, "imageUrl", "imgUrl", "url");
+      const offsetX = toNum(pick(l, "offsetX", "x", "left"), 0);
+      const offsetY = toNum(pick(l, "offsetY", "y", "top"), 0);
+      const width = toNum(pick(l, "width", "w"), 0);
+      const height = toNum(pick(l, "height", "h"), 0);
+      return { ...l, imageUrl, offsetX, offsetY, width, height };
+    })
+    .filter((l) => !!l.imageUrl);
+
+  cleaned.sort((a, b) => layerRank(a.__layerType) - layerRank(b.__layerType));
+  return cleaned;
+}
+
+// ✅ bbox는 "레이어 + 기본 캐릭터(0,0,114,126)"를 함께 포함해야 좌표가 안 틀어짐
+function computeBBox(layers) {
+  const valid = (layers || []).filter(
+    (l) =>
+      Number.isFinite(l.offsetX) &&
+      Number.isFinite(l.offsetY) &&
+      Number.isFinite(l.width) &&
+      Number.isFinite(l.height) &&
+      l.width > 0 &&
+      l.height > 0
+  );
+
+  let minX = 0;
+  let minY = 0;
+  let maxX = BASE_W;
+  let maxY = BASE_H;
+
+  for (const l of valid) {
+    minX = Math.min(minX, l.offsetX);
+    minY = Math.min(minY, l.offsetY);
+    maxX = Math.max(maxX, l.offsetX + l.width);
+    maxY = Math.max(maxY, l.offsetY + l.height);
+  }
+
+  const w = Math.max(1, maxX - minX);
+  const h = Math.max(1, maxY - minY);
+
+  return { minX, minY, w: Math.max(w, BASE_W), h: Math.max(h, BASE_H) };
+}
+
+// ✅ iOS에서 overflow+borderRadius+transform 조합으로 이미지가 통째로 안 보이는 버그가 있어서
+// transform(scale/translate)을 쓰지 않고 "좌표/크기 자체를 스케일링"해서 배치한다.
+const CharacterAvatar = memo(function CharacterAvatar({
+  className,
+  size = 44,
+  member,
+  badgeMember,
+}) {
+  const equippedItems = member?.equippedItems;
+  const equippedBadges = badgeMember?.equippedBadges;
+
+  const layers = useMemo(
+    () => normalizeLayers(equippedItems, equippedBadges),
+    [equippedItems, equippedBadges]
+  );
+
+  const bbox = useMemo(() => computeBBox(layers), [layers]);
+  const scale = Math.min(size / bbox.w, size / bbox.h);
+
+  const stageW = bbox.w * scale;
+  const stageH = bbox.h * scale;
+  const stageLeft = (size - stageW) / 2;
+  const stageTop = (size - stageH) / 2;
+
+  const baseLeft = stageLeft + (0 - bbox.minX) * scale;
+  const baseTop = stageTop + (0 - bbox.minY) * scale;
+
+  return (
+    <div
+      className={className}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        overflow: "hidden",
+        position: "relative",
+        flex: "0 0 auto",
+        background: "rgba(255,255,255,0.15)",
+      }}
+      aria-hidden="true"
+    >
+      {/* ✅ 기본 바디 */}
+      <img
+        src={baseChar}
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          left: baseLeft,
+          top: baseTop,
+          width: BASE_W * scale,
+          height: BASE_H * scale,
+          objectFit: "contain",
+          display: "block",
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+
+      {/* ✅ 아이템/뱃지 레이어 */}
+      {layers.map((l, idx) => (
+        <img
+          key={`${l.itemId ?? l.badgeId ?? idx}-${idx}`}
+          src={l.imageUrl}
+          alt=""
+          draggable={false}
+          style={{
+            position: "absolute",
+            left: stageLeft + (l.offsetX - bbox.minX) * scale,
+            top: stageTop + (l.offsetY - bbox.minY) * scale,
+            width: l.width * scale,
+            height: l.height * scale,
+            objectFit: "contain",
+            display: "block",
+          }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ))}
+    </div>
+  );
+});
 
 export default function TeamBoardDetail() {
   const navigate = useNavigate();
@@ -53,6 +232,86 @@ export default function TeamBoardDetail() {
   const [commentText, setCommentText] = useState("");
   const [sending, setSending] = useState(false);
 
+  // ✅ 팀원 캐릭터/뱃지 상태
+  const [membersChars, setMembersChars] = useState([]);
+  const [membersBadges, setMembersBadges] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadVisuals = async () => {
+      if (!Number.isFinite(teamId)) return;
+
+      try {
+        const [charsRes, badgesRes] = await Promise.allSettled([
+          http.get(`/api/items/${teamId}/characters`),
+          http.get(`/api/badges/team/${teamId}/members`),
+        ]);
+
+        if (ignore) return;
+
+        const chars =
+          charsRes.status === "fulfilled" ? normalizeList(charsRes.value) : [];
+        const badges =
+          badgesRes.status === "fulfilled"
+            ? normalizeList(badgesRes.value)
+            : [];
+
+        setMembersChars(chars);
+        setMembersBadges(badges);
+      } catch (_) {
+        if (!ignore) {
+          setMembersChars([]);
+          setMembersBadges([]);
+        }
+      }
+    };
+
+    loadVisuals();
+    return () => {
+      ignore = true;
+    };
+  }, [teamId]);
+
+  const { charById, charByName, badgeById, badgeByName } = useMemo(() => {
+    const cId = new Map();
+    const cName = new Map();
+    for (const m of Array.isArray(membersChars) ? membersChars : []) {
+      const id = getUserId(m);
+      const name = pick(m, "username", "userName", "name");
+      if (id != null) cId.set(id, m);
+      if (name) cName.set(String(name), m);
+    }
+
+    const bId = new Map();
+    const bName = new Map();
+    for (const m of Array.isArray(membersBadges) ? membersBadges : []) {
+      const id = getUserId(m);
+      const name = pick(m, "username", "userName", "name");
+      if (id != null) bId.set(id, m);
+      if (name) bName.set(String(name), m);
+    }
+
+    return {
+      charById: cId,
+      charByName: cName,
+      badgeById: bId,
+      badgeByName: bName,
+    };
+  }, [membersChars, membersBadges]);
+
+  const resolveMember = (userId, username) => {
+    if (userId != null)
+      return charById.get(userId) ?? charByName.get(String(username));
+    return charByName.get(String(username));
+  };
+
+  const resolveBadgeMember = (userId, username) => {
+    if (userId != null)
+      return badgeById.get(userId) ?? badgeByName.get(String(username));
+    return badgeByName.get(String(username));
+  };
+
   useEffect(() => {
     let ignore = false;
 
@@ -65,7 +324,6 @@ export default function TeamBoardDetail() {
         const data = await getTeamBoard(teamId, boardId);
         if (ignore) return;
 
-        // 좋아요 상태는 서버에 없을 수 있으니 _liked로만 관리
         setPost({
           ...data,
           _liked: !!(
@@ -110,6 +368,7 @@ export default function TeamBoardDetail() {
   const vm = useMemo(() => {
     const p = post || {};
     return {
+      writerId: getUserId(p),
       writerName: p.writerName ?? p.username ?? "익명",
       createdAt: p.createdAt,
       content: p.content ?? "",
@@ -190,6 +449,9 @@ export default function TeamBoardDetail() {
     }
   };
 
+  const postMember = resolveMember(vm.writerId, vm.writerName);
+  const postBadgeMember = resolveBadgeMember(vm.writerId, vm.writerName);
+
   return (
     <div className="tp-board-detail-page">
       <div className="tp-board-header">
@@ -221,7 +483,14 @@ export default function TeamBoardDetail() {
         ) : (
           <div className="tp-post-card">
             <div className="tp-post-top">
-              <div className="tp-avatar" aria-hidden="true" />
+              {/* ✅ 게시글 작성자 캐릭터 프리뷰 */}
+              <CharacterAvatar
+                className="tp-avatar"
+                size={44}
+                member={postMember}
+                badgeMember={postBadgeMember}
+              />
+
               <div className="tp-post-meta">
                 <div className="tp-post-author">{vm.writerName}</div>
                 <div className="tp-post-date">
@@ -269,12 +538,24 @@ export default function TeamBoardDetail() {
               ) : (
                 comments.map((c, idx) => {
                   const cid = c.commentId ?? c.id ?? idx;
+                  const authorId = getUserId(c);
                   const author = c.writerName ?? c.username ?? "익명";
                   const createdAt = c.createdAt;
                   const content = c.content ?? "";
+
+                  const cm = resolveMember(authorId, author);
+                  const bm = resolveBadgeMember(authorId, author);
+
                   return (
                     <div className="tp-comment-item" key={cid}>
-                      <div className="tp-avatar-sm" aria-hidden="true" />
+                      {/* ✅ 댓글 작성자 캐릭터 프리뷰 */}
+                      <CharacterAvatar
+                        className="tp-avatar-sm"
+                        size={34}
+                        member={cm}
+                        badgeMember={bm}
+                      />
+
                       <div className="tp-comment-main">
                         <div className="tp-comment-head">
                           <div className="tp-comment-author">{author}</div>
