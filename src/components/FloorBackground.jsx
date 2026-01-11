@@ -55,7 +55,7 @@ export default function FloorBackground({ personalLevel }) {
           // 1층: bottom: 45px, 10층: bottom: -60px
           bottom: `${45 - (personalLevel - 1) * (105 / 9)}px`,
           transform: "translateX(-50%) scale(0.85)",
-          transition: "bottom 0.5s ease-in-out",
+          transition: "bottom 0.5s ease-in-out 1.3s",
         }}
       />
     );
@@ -77,8 +77,14 @@ export default function FloorBackground({ personalLevel }) {
             baseOffset: -60,
           })}px`,
           transform: "translateX(-50%) scale(0.85)",
-          transition: "bottom 0.5s ease-in-out",
+          transition: "bottom 0.5s ease-in-out 1.3s",
           objectPosition: "bottom center",
+        }}
+        onLoad={(e) => {
+          const img = e.target;
+          if (bgSkyImageHeight === 0 && img.naturalHeight > 0) {
+            setBgSkyImageHeight(img.naturalHeight);
+          }
         }}
       />
     );
@@ -100,8 +106,14 @@ export default function FloorBackground({ personalLevel }) {
             baseOffset: -60,
           })}px`,
           transform: "translateX(-50%) scale(0.85)",
-          transition: "bottom 0.5s ease-in-out",
+          transition: "bottom 0.5s ease-in-out 1.3s",
           objectPosition: "bottom center",
+        }}
+        onLoad={(e) => {
+          const img = e.target;
+          if (bgMoonImageHeight === 0 && img.naturalHeight > 0) {
+            setBgMoonImageHeight(img.naturalHeight);
+          }
         }}
       />
     );
@@ -126,7 +138,7 @@ export default function FloorBackground({ personalLevel }) {
           style={{
             bottom: `${bottomValue}px`,
             transform: "translateX(-50%) scale(0.85)",
-            transition: "bottom 0.5s ease-in-out",
+            transition: "bottom 0.5s ease-in-out 1.3s",
             objectPosition: "bottom center",
           }}
         />
@@ -144,7 +156,7 @@ export default function FloorBackground({ personalLevel }) {
         style={{
           bottom: `${baseOffset - movePx + visualOffset}px`,
           transform: "translateX(-50%) scale(0.85)",
-          transition: "bottom 0.5s ease-in-out",
+          transition: "bottom 0.5s ease-in-out 1.3s",
           objectPosition: "bottom center",
         }}
       />
@@ -167,7 +179,7 @@ export default function FloorBackground({ personalLevel }) {
             extraOffset: -80,
           })}px`,
           transform: "translateX(-50%) scale(0.85)",
-          transition: "bottom 0.5s ease-in-out",
+          transition: "bottom 0.5s ease-in-out 1.3s",
           objectPosition: "bottom center",
         }}
       />

@@ -78,6 +78,12 @@ export function getSchedules({ year, month }) {
   );
 }
 
+// 개인 플랜 미달성 일정 조회
+// GET /api/me/personal-place/missed
+export async function getMissedPersonalPlace() {
+  return await http.get("/api/me/personal-place/missed");
+}
+
 // 특정 날짜의 Floor 상태 조회
 // GET /api/floors/status/date/{date}
 export async function getFloorsStatusByDate(date) {
