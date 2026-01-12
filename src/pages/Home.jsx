@@ -3,41 +3,33 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import ElevatorDoor from "../components/ElevatorDoor.jsx";
-import FloorBackground from "../components/FloorBackground.jsx";
-import TaskListSection from "../components/TaskListSection.jsx";
 import QuestList from "../components/QuestList.jsx";
+import { floors } from "../constants/floors.js";
+import BackButton from "../components/BackButton.jsx";
 import Navbar from "../components/Navbar.jsx";
 import WeeklyAchievementModal from "../components/WeeklyAchievementModal.jsx";
 
-// ✅ 팝업(이식)
+// ✅ 팝업
 import CoinPopup from "../components/CoinPopup.jsx";
 import BadgePopup from "../components/BadgePopup.jsx";
 
+import MonthProjects from "../components/MonthProjects.jsx";
+
 import {
-  getCalendarStats,
-  getSchedule,
-  updateFloorCompletion,
-  deleteSchedule,
-  getFloorsStatusByDate,
-  getTodayFloors,
-  getMyProfile,
-  getMissedPersonalPlace,
-  completeFloor,
-  uncompleteFloor,
-  // ✅❌ 제거: getMyEquippedItems,
-  // ✅❌ 제거: getMyEquippedBadges,
-  // ✅ 캐릭터 베이스 이미지(아이템/뱃지 장착 로직 제거 후 대체)
   getMyCharacter,
-  // ✅ 뱃지 팝업 조회용
+  getCalendarStats,
+  getFloorsStatusByDate,
+  getSchedules,
+  getSchedule,
+  deleteSchedule,
   http,
 } from "../services/api.js";
-
 import { AUTH_TOKEN_KEY } from "../config.js";
 
 import "../App.css";
 import floorBoardImg from "../assets/img/board 1.png";
+import backgroundImg from "../assets/img/image 20.png";
 
-// 날짜를 YYYY-MM-DD 형식으로 변환
 function formatDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -54,59 +46,6 @@ function toYmdLocal(isoString) {
   return `${y}-${m}-${day}`;
 }
 
-const COMPLETED_TOKENS = new Set([
-  "true",
-  "1",
-  "y",
-  "yes",
-  "done",
-  "complete",
-  "completed",
-]);
-
-function isCompletedValue(value) {
-  if (value === true || value === 1) return true;
-  if (typeof value === "string") {
-    return COMPLETED_TOKENS.has(value.toLowerCase());
-  }
-  return false;
-}
-
-function isFloorCompleted(floor) {
-  if (!floor) return false;
-  const value =
-    floor.completed ??
-    floor.isCompleted ??
-    floor.done ??
-    floor.status ??
-    floor.state;
-  return isCompletedValue(value);
-}
-
-function getFloorIdValue(floor) {
-  if (!floor) return null;
-  return floor.floorId ?? floor.id ?? null;
-}
-
-function getStatusDateFromFloors(floors) {
-  if (!Array.isArray(floors) || floors.length === 0) {
-    return formatDate(new Date());
-  }
-  const firstDate = floors[0]?.scheduledDate;
-  if (typeof firstDate === "string" && firstDate.length >= 10) {
-    return firstDate.slice(0, 10);
-  }
-  return formatDate(new Date());
-}
-
-function getStatusDateForSubtask(subtask) {
-  const raw = subtask?.scheduledDate;
-  if (typeof raw === "string" && raw.length >= 10) {
-    return raw.slice(0, 10);
-  }
-  return formatDate(new Date());
-}
-
 const elevatorInsideImg = "/images/frame.png";
 
 export default function Home() {
@@ -116,15 +55,10 @@ export default function Home() {
   const [isOpen, setIsOpen] = useState(true);
   const [isMoving, setIsMoving] = useState(false);
   const [currentFloor, setCurrentFloor] = useState(1);
-  const [direction, setDirection] = useState("up");
-
-  // ✅❌ 제거: 아이템/뱃지 장착 상태
-  // const [equippedItems, setEquippedItems] = useState([]);
-  // const [equippedBadges, setEquippedBadges] = useState([]);
-
-  // ✅ 대체: 캐릭터 베이스 이미지
+  const [direction, setDirection] = useState("up"); // (미사용이어도 유지)
   const [characterImageUrl, setCharacterImageUrl] = useState(null);
 
+  // 진행도 상태
   const [progressInfo, setProgressInfo] = useState({
     percent: 0,
     done: 0,
@@ -137,24 +71,23 @@ export default function Home() {
   });
   const [projectCount, setProjectCount] = useState(0);
 
-  // ✅ 주간 모달: 팝업 큐 끝난 뒤에만
+  // ✅ 주간 모달은 팝업 큐 끝난 뒤에만 띄우기
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
 
   const [tasks, setTasks] = useState([]);
   const [undoneTasks, setUndoneTasks] = useState([]); // 미달성 퀘스트
-  const [showUndoneQuests, setShowUndoneQuests] = useState(false); // 미달성 퀘스트 토글
+  const [showUndoneQuests, setShowUndoneQuests] = useState(false); // (미사용이어도 유지)
   const [loading, setLoading] = useState(false);
 
-  const [personalLevel, setPersonalLevel] = useState(1); // 현재 층수
-  const pendingFloorRef = useRef(null);
-  const hasInitialFloorSyncRef = useRef(false);
-
-  // ✅✅✅ 팝업 큐
+  // ✅✅✅ 팝업 큐 (안정 버전)
   // item: { type: "coin"|"badge", coinAmount?, badge?, asOfDate?, seenKey? }
   const [popupQueue, setPopupQueue] = useState([]);
   const activePopup = popupQueue.length ? popupQueue[0] : null;
 
-  // ✅ Home 진입 플래그(로그인에서 넘긴 state) — 새로고침 대비 sessionStorage fallback
+  // ✅ "큐 준비 완료" 플래그 (초기 빈 배열을 '큐 종료'로 오해하는 레이스 방지)
+  const [popupBootstrapped, setPopupBootstrapped] = useState(false);
+
+  // ✅ Home 진입 플래그 — sessionStorage fallback + (온보딩 후 보상 플래그)까지 흡수
   const [entryFlags] = useState(() => {
     let fromSession = {};
     try {
@@ -163,39 +96,44 @@ export default function Home() {
     } catch {
       fromSession = {};
     }
-    const fromNav = location.state || {};
-    const merged = { ...fromSession, ...fromNav };
+
+    let fromPostOnboarding = {};
     try {
-      sessionStorage.setItem("home_entry_flags", JSON.stringify(merged));
+      const raw2 = sessionStorage.getItem("post_onboarding_flags");
+      fromPostOnboarding = raw2 ? JSON.parse(raw2) : {};
     } catch {
-      // ignore
+      fromPostOnboarding = {};
     }
+
+    const fromNav = location.state || {};
+
+    // 우선순위: 기존 세션 -> 온보딩 후 보상 -> navigate state
+    const merged = { ...fromSession, ...fromPostOnboarding, ...fromNav };
+    sessionStorage.setItem("home_entry_flags", JSON.stringify(merged));
+
+    // 온보딩 완료해서 needsOnboarding이 false로 들어오면, 온보딩 후 보상 플래그는 정리해도 됨
+    if (merged?.needsOnboarding === false) {
+      sessionStorage.removeItem("post_onboarding_flags");
+    }
+
     return merged;
   });
 
   const goToFloor = (targetFloor) => {
-    if (isMoving || !isOpen || currentFloor === targetFloor) {
-      return;
-    }
-    pendingFloorRef.current = targetFloor;
+    if (isMoving || !isOpen || currentFloor === targetFloor) return;
     setDirection(targetFloor > currentFloor ? "up" : "down");
     setIsOpen(false);
-    setTimeout(() => {
-      setIsMoving(true);
-    }, 1500);
+    setTimeout(() => setIsMoving(true), 1500);
     setTimeout(() => {
       setIsMoving(false);
       setCurrentFloor(targetFloor);
-      setTimeout(() => {
-        setIsOpen(true);
-        pendingFloorRef.current = null;
-      }, 500);
+      setTimeout(() => setIsOpen(true), 500);
     }, 3500);
   };
 
-  // =========================
-  // ✅✅✅ (이식) 뱃지 팝업 데이터
-  // =========================
+  const floor = floors[currentFloor]; // (미사용이어도 유지)
+
+  // ✅ 오늘 획득한 뱃지(earnedAt이 "오늘"인 것들) 조회
   const fetchTodayEarnedBadges = async () => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return { asOfDate: null, earnedBadges: [] };
@@ -203,11 +141,16 @@ export default function Home() {
     try {
       const summary = await http.get("/api/me/badges/summary");
 
-      const asOfDate =
+      const asOfDateRaw =
         summary?.asOfDate ??
         summary?.data?.asOfDate ??
         summary?.result?.asOfDate ??
         null;
+
+      const asOfDate =
+        typeof asOfDateRaw === "string" && asOfDateRaw.length >= 10
+          ? asOfDateRaw.slice(0, 10)
+          : null;
 
       const badges =
         summary?.badges ??
@@ -215,25 +158,28 @@ export default function Home() {
         summary?.result?.badges ??
         [];
 
-      if (!asOfDate || !Array.isArray(badges)) {
+      if (!Array.isArray(badges)) {
         return { asOfDate, earnedBadges: [] };
       }
 
-      // ✅ 타임존 안전: earnedAt을 로컬로 변환해서 asOfDate와 비교
+      // ✅ "오늘" 기준으로 필터 (asOfDate는 참고값으로만 둠)
+      const todayYmd = formatDate(new Date());
+
       const earnedToday = badges.filter((b) => {
         const earnedAt = b?.earnedAt;
         if (!earnedAt) return false;
-        return toYmdLocal(earnedAt) === asOfDate;
+        return toYmdLocal(earnedAt) === todayYmd;
       });
 
-      // ✅ 이미 본 뱃지는 제외(여러개 대응)
+      // ✅ 이미 본 뱃지는 제외(여러개 대응) - 키도 "오늘" 기준으로 묶기
       const filtered = earnedToday.filter((b) => {
         const badgeId = b?.badgeId ?? b?.id ?? null;
         const badgeKey =
           badgeId != null
             ? String(badgeId)
             : `${b?.name ?? "badge"}:${b?.earnedAt ?? ""}`;
-        const seenKey = `badge_popup_seen:${asOfDate}:${badgeKey}`;
+
+        const seenKey = `badge_popup_seen:${todayYmd}:${badgeKey}`;
         return localStorage.getItem(seenKey) !== "1";
       });
 
@@ -257,13 +203,55 @@ export default function Home() {
     });
   };
 
-  // ✅✅✅ Home 진입 시 팝업 큐 구성 (50 → 10 → 뱃지(들))
+  // =========================================================
+  // ✅✅✅ (안정) 온보딩은 "먼저"
+  // - 최초 로그인(신규 유저)만 needsOnboarding=true로 들어온다는 전제
+  // - 온보딩 필요하면 Home에서 팝업 구성/표시하지 않고 /tendency로 즉시 이동
+  // - 대신 보상 플래그는 sessionStorage(post_onboarding_flags)에 저장해서
+  //   온보딩 완료 후 Home 재진입 때 동일 팝업 로직으로 처리
+  // =========================================================
   useEffect(() => {
+    const needsOnboarding = Boolean(entryFlags?.needsOnboarding);
+    if (!needsOnboarding) return;
+
+    // ✅ 신규유저 보상 플래그 보존(온보딩 후 홈에서 팝업 띄우기 위해)
     const firstLoginBonusGiven = Boolean(
       entryFlags?.firstLoginBonusGiven || entryFlags?.isFirstLogin
     );
     const dailyRewardGiven = Boolean(entryFlags?.dailyRewardGiven);
+
+    sessionStorage.setItem(
+      "post_onboarding_flags",
+      JSON.stringify({
+        // 보상 판단에 필요한 최소 플래그만 보존
+        firstLoginBonusGiven,
+        isFirstLogin: Boolean(entryFlags?.isFirstLogin),
+        dailyRewardGiven,
+        // 온보딩 끝나면 needsOnboarding은 false로 들어오게(온보딩 페이지에서 그렇게 보내거나)
+        // 혹은 여기서도 false로 박아두고, tendency에서 /home 재진입 시 needsOnboarding:false로 보내는게 제일 깔끔
+      })
+    );
+
+    // 현재 Home 진입 플래그는 일단 정리(루프 방지)
+    sessionStorage.removeItem("home_entry_flags");
+    sessionStorage.removeItem("weekly_modal_pending");
+
+    navigate("/tendency", { replace: true });
+  }, [entryFlags, navigate]);
+
+  // =========================================================
+  // ✅✅✅ (안정) Home 진입 시 팝업 큐 구성
+  // - 50 → 10 → 뱃지(들) 순서 보장
+  // - 온보딩 필요하면 여기서 아무것도 하지 않음(위 useEffect가 먼저 이동)
+  // =========================================================
+  useEffect(() => {
     const needsOnboarding = Boolean(entryFlags?.needsOnboarding);
+    if (needsOnboarding) return;
+
+    const firstLoginBonusGiven = Boolean(
+      entryFlags?.firstLoginBonusGiven || entryFlags?.isFirstLogin
+    );
+    const dailyRewardGiven = Boolean(entryFlags?.dailyRewardGiven);
 
     (async () => {
       const q = [];
@@ -273,31 +261,28 @@ export default function Home() {
         q.push({ type: "coin", coinAmount: 50 });
       }
 
-      // 2) 출석 10코인
-      // swagger 정책상 "첫 로그인 날도 출석 10코인"이 같이 지급될 수 있음 → 방어
+      // 2) 출석 10코인 (첫 로그인 날도 같이 지급될 수 있어 방어)
       if (dailyRewardGiven || firstLoginBonusGiven) {
         q.push({ type: "coin", coinAmount: 10 });
       }
 
-      // 3) 오늘 획득 뱃지(들) — 출석 보상 받은 날만 의미있어 체크
-      if (dailyRewardGiven || firstLoginBonusGiven) {
-        const { asOfDate, earnedBadges } = await fetchTodayEarnedBadges();
-        if (asOfDate && earnedBadges.length > 0) {
-          earnedBadges.forEach((badge) => {
-            const badgeId = badge?.badgeId ?? badge?.id ?? null;
-            const badgeKey =
-              badgeId != null
-                ? String(badgeId)
-                : `${badge?.name ?? "badge"}:${badge?.earnedAt ?? ""}`;
-            const seenKey = `badge_popup_seen:${asOfDate}:${badgeKey}`;
-            q.push({ type: "badge", badge, asOfDate, seenKey });
-          });
-        }
+      const { earnedBadges } = await fetchTodayEarnedBadges();
+      if (earnedBadges.length > 0) {
+        const todayYmd = formatDate(new Date());
+        earnedBadges.forEach((badge) => {
+          const badgeId = badge?.badgeId ?? badge?.id ?? null;
+          const badgeKey =
+            badgeId != null
+              ? String(badgeId)
+              : `${badge?.name ?? "badge"}:${badge?.earnedAt ?? ""}`;
+          const seenKey = `badge_popup_seen:${todayYmd}:${badgeKey}`;
+          q.push({ type: "badge", badge, asOfDate: todayYmd, seenKey });
+        });
       }
 
       setPopupQueue(q);
 
-      // ✅ 주간모달은 "기존 유저(온보딩 완료)"만, 그리고 큐 끝난 뒤에만 띄우기 위해 pending만 저장
+      // ✅ 주간모달은 기존 유저(온보딩 X, 첫로그인 X)만, 그리고 큐 끝난 뒤에만
       if (!firstLoginBonusGiven && !needsOnboarding) {
         sessionStorage.setItem("weekly_modal_pending", "1");
       } else {
@@ -306,21 +291,15 @@ export default function Home() {
     })();
   }, [entryFlags]);
 
-  // ✅ 큐 종료 후 후처리: 온보딩 이동 / 주간모달
+  // =========================================================
+  // ✅✅✅ (안정) 큐 종료 후 후처리: 주간모달 + 플래그 정리
+  // - "큐를 아직 만들기 전(초기 빈 배열)"을 큐 종료로 착각하지 않도록 popupBootstrapped 가드
+  // =========================================================
   useEffect(() => {
+    if (!popupBootstrapped) return;
     if (popupQueue.length !== 0) return;
 
-    const needsOnboarding = Boolean(entryFlags?.needsOnboarding);
-
-    // 1) 온보딩 필요면 팝업 끝난 뒤 성향조사로
-    if (needsOnboarding) {
-      sessionStorage.removeItem("home_entry_flags");
-      sessionStorage.removeItem("weekly_modal_pending");
-      navigate("/tendency");
-      return;
-    }
-
-    // 2) 기존유저면 주간모달
+    // 기존유저면 주간모달
     const pendingWeekly =
       sessionStorage.getItem("weekly_modal_pending") === "1";
     if (pendingWeekly) {
@@ -328,170 +307,133 @@ export default function Home() {
       sessionStorage.removeItem("weekly_modal_pending");
     }
 
-    // 홈 진입 플래그 정리
+    // Home 진입 플래그 정리
     sessionStorage.removeItem("home_entry_flags");
-  }, [popupQueue.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 온보딩 후 보상 플래그도 처리 끝났으면 정리
+    sessionStorage.removeItem("post_onboarding_flags");
+  }, [popupQueue.length, popupBootstrapped]);
 
-  // =========================
-  // ✅ 오늘 날짜의 진행도 로드
-  // =========================
+  // =========================================================
+  // ✅✅✅ "할 일 하나 달성할 때마다 10코인 팝업" (안정 큐 방식으로)
+  // - progressInfo.done이 증가하면 그 증가분만큼 10코인 팝업을 큐에 추가
+  // - 초기 로드(이미 완료된 것 반영)는 팝업을 띄우지 않음
+  // - 팝업이 떠 있는 중에도 큐 뒤에 안전하게 붙음
+  // =========================================================
+  const prevDoneRef = useRef(null);
+
+  useEffect(() => {
+    if (!popupBootstrapped) return;
+
+    const doneNow = Number(progressInfo?.done ?? 0);
+
+    // 최초 1회는 기준만 잡고 팝업 없음(재접속/새로고침 시 중복 방지)
+    if (prevDoneRef.current === null) {
+      prevDoneRef.current = doneNow;
+      return;
+    }
+
+    const delta = doneNow - prevDoneRef.current;
+    if (delta > 0) {
+      const bonusPopups = Array.from({ length: delta }, () => ({
+        type: "coin",
+        coinAmount: 10,
+      }));
+
+      setPopupQueue((prev) => [...prev, ...bonusPopups]);
+    }
+
+    prevDoneRef.current = doneNow;
+  }, [progressInfo?.done, popupBootstrapped]);
+
+  // 오늘 진행도 로드
   useEffect(() => {
     const loadTodayProgress = async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       try {
-        const todayFloors = await getTodayFloors();
+        const today = new Date();
+        const todayStr = formatDate(today);
+        const data = await getCalendarStats(todayStr, todayStr);
 
-        if (Array.isArray(todayFloors)) {
-          const total = todayFloors.length;
-
-          let todayFloorsStatus = null;
-          try {
-            const statusDate = getStatusDateFromFloors(todayFloors);
-            todayFloorsStatus = await getFloorsStatusByDate(statusDate);
-          } catch (error) {}
-
-          let done = 0;
-          for (const floor of todayFloors) {
-            let isCompleted = false;
-
-            if (todayFloorsStatus && Array.isArray(todayFloorsStatus)) {
-              const statusFloor = todayFloorsStatus.find(
-                (f) => getFloorIdValue(f) === floor.floorId
-              );
-              if (statusFloor) {
-                isCompleted = isFloorCompleted(statusFloor);
-              }
-            }
-
-            if (!isCompleted) {
-              if (isFloorCompleted(floor)) {
-                isCompleted = true;
-              } else {
-                try {
-                  const detail = await getSchedule(floor.scheduleId);
-                  const detailFloors = detail.floors || [];
-                  const detailFloor = detailFloors.find(
-                    (f) => getFloorIdValue(f) === floor.floorId
-                  );
-                  if (detailFloor) {
-                    isCompleted = isFloorCompleted(detailFloor);
-                  }
-                } catch (err) {}
-              }
-            }
-            if (isCompleted) done++;
+        if (Array.isArray(data) && data.length > 0) {
+          const todayData =
+            data.find((item) => item.date === todayStr) || data[0];
+          if (todayData) {
+            const done = todayData.completedCount || 0;
+            const total =
+              projectCount > 0 ? projectCount : todayData.totalCount || 0;
+            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+            setTodayProgress({ percent, done, total });
           }
+        } else if (data && data.totalCount !== undefined) {
+          const done = data.completedCount || 0;
+          const total = projectCount > 0 ? projectCount : data.totalCount || 0;
           const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-          setTodayProgress({
-            percent,
-            done,
-            total,
-          });
+          setTodayProgress({ percent, done, total });
         }
       } catch (error) {
-        if (error.status === 403) {
-          return;
-        }
+        if (error.status !== 403)
+          console.error("오늘의 진행도 로드 실패:", error);
       }
     };
-    loadTodayProgress();
-  }, []);
 
-  // 프로젝트 개수 변경 시 todayProgress의 total 업데이트
+    loadTodayProgress();
+  }, [projectCount]);
+
   useEffect(() => {
     if (projectCount > 0) {
       setTodayProgress((prev) => {
         const percent =
           projectCount > 0 ? Math.round((prev.done / projectCount) * 100) : 0;
-        return {
-          ...prev,
-          total: projectCount,
-          percent,
-        };
+        return { ...prev, total: projectCount, percent };
       });
     }
   }, [projectCount]);
 
-  // ✅✅✅ (정리) 캐릭터 베이스 이미지 로드만 유지 (아이템/뱃지 장착 API 제거)
+  // 캐릭터 이미지 로드
   useEffect(() => {
     const loadCharacter = async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) return;
-
       try {
         const data = await getMyCharacter();
-        const url = data?.imageUrl ?? data?.imgUrl ?? null;
-        if (url) setCharacterImageUrl(url);
+        if (data && data.imageUrl) setCharacterImageUrl(data.imageUrl);
       } catch (error) {
-        if (error?.status === 403) return;
+        if (error.status !== 403) console.error("캐릭터 로드 실패:", error);
       }
     };
     loadCharacter();
   }, []);
 
-  // 사용자 프로필에서 층수 로드
   useEffect(() => {
-    const loadProfile = async () => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token) {
-        return;
-      }
-
-      try {
-        const profile = await getMyProfile();
-        if (profile && profile.personalLevel !== undefined) {
-          setPersonalLevel(profile.personalLevel);
-        }
-      } catch (error) {}
-    };
-
-    loadProfile();
-  }, []);
-
-  // personalLevel 변경은 UI만 동기화 (애니메이션은 완료/취소 시에만 실행)
-  useEffect(() => {
-    const desired = Math.max(1, Number(personalLevel) || 1);
-    if (!hasInitialFloorSyncRef.current) {
-      setCurrentFloor(desired);
-      hasInitialFloorSyncRef.current = true;
-      return;
-    }
-    if (pendingFloorRef.current === desired) {
-      return;
-    }
+    const maxFloor = Object.keys(floors).length;
+    const desired = Math.max(
+      1,
+      Math.min(1 + (progressInfo?.done ?? 0), maxFloor)
+    );
     if (desired !== currentFloor) {
-      setCurrentFloor(desired);
+      goToFloor(desired);
     }
-  }, [personalLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [progressInfo, currentFloor, isMoving, isOpen]);
 
-  // progressInfo의 done 값이 변경될 때 todayProgress 업데이트
   useEffect(() => {
     if (projectCount > 0) {
       setTodayProgress((prev) => {
         const done = progressInfo.done || 0;
         const percent =
           projectCount > 0 ? Math.round((done / projectCount) * 100) : 0;
-        return {
-          ...prev,
-          done,
-          total: projectCount,
-          percent,
-        };
+        return { ...prev, done, total: projectCount, percent };
       });
     }
   }, [progressInfo.done, projectCount]);
 
-  // =========================
   // 오늘 날짜의 작업 목록 불러오기
-  // =========================
   const loadTasks = async () => {
     const today = new Date();
     const todayStr = formatDate(today);
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
 
     setLoading(true);
@@ -504,36 +446,37 @@ export default function Home() {
     }
 
     try {
-      const todayFloors = await getTodayFloors();
+      // 오늘 날짜의 floors 가져오기
+      const todayFloors = await getFloorsStatusByDate(todayStr);
+
+      // 모든 일정 가져오기 (미달성 퀘스트를 위해)
+      const allSchedules = await getSchedules({ year, month });
 
       if (Array.isArray(todayFloors) && todayFloors.length > 0) {
+        // floors를 scheduleId별로 그룹화
         const scheduleMap = new Map();
 
-        todayFloors.forEach((floor) => {
-          const scheduleId = floor.scheduleId;
+        todayFloors.forEach((floorItem) => {
+          const scheduleId = floorItem.scheduleId;
           if (!scheduleMap.has(scheduleId)) {
             scheduleMap.set(scheduleId, {
               scheduleId,
-              title: floor.scheduleTitle || "제목 없음",
-              color: floor.scheduleColor || "#3a8284",
+              title: floorItem.scheduleTitle || "제목 없음",
+              color: floorItem.scheduleColor || "#3a8284",
               floors: [],
             });
           }
-          scheduleMap.get(scheduleId).floors.push(floor);
+          scheduleMap.get(scheduleId).floors.push(floorItem);
         });
 
-        let todayFloorsStatus = null;
-        try {
-          const statusDate = getStatusDateFromFloors(todayFloors);
-          todayFloorsStatus = await getFloorsStatusByDate(statusDate);
-        } catch (error) {}
-
+        // 오늘 날짜의 tasks 변환
         const todayTasks = await Promise.all(
           Array.from(scheduleMap.values()).map(async (schedule) => {
             try {
               const detail = await getSchedule(schedule.scheduleId);
               const startDate = detail.startDate;
 
+              // 오늘 날짜가 startDate로부터 몇 번째 날인지 계산
               const start = new Date(startDate);
               const target = new Date(todayStr);
               start.setHours(0, 0, 0, 0);
@@ -542,63 +485,25 @@ export default function Home() {
                 (target - start) / (1000 * 60 * 60 * 24)
               );
 
-              let todayFloorFromApi = null;
-              let todayFloorFromDetail = null;
-
-              if (schedule.floors.length > 0) {
-                todayFloorFromApi = schedule.floors[0];
-              }
-
-              let completedStatus = false;
-              const targetFloorId = getFloorIdValue(todayFloorFromApi);
-              const targetScheduledDate =
-                todayFloorFromApi?.scheduledDate ?? todayStr;
-
-              if (targetFloorId && todayFloorsStatus) {
-                const statusFloor = Array.isArray(todayFloorsStatus)
-                  ? todayFloorsStatus.find(
-                      (f) => getFloorIdValue(f) === targetFloorId
-                    )
-                  : null;
-                if (statusFloor) {
-                  completedStatus = isFloorCompleted(statusFloor);
-                }
-              }
-
-              if (!completedStatus) {
-                const detailFloors = detail.floors || [];
-                todayFloorFromDetail =
-                  detailFloors.find(
-                    (f) => getFloorIdValue(f) === targetFloorId
-                  ) ||
-                  detailFloors[daysDiff] ||
-                  detailFloors[0];
-
-                if (todayFloorFromDetail) {
-                  completedStatus = isFloorCompleted(todayFloorFromDetail);
-                }
-              }
+              // 오늘 날짜에 해당하는 floor만 필터링
+              const todayFloor =
+                schedule.floors.find((f, index) => {
+                  return (
+                    index === daysDiff ||
+                    (daysDiff >= 0 &&
+                      daysDiff < schedule.floors.length &&
+                      index === daysDiff)
+                  );
+                }) || schedule.floors[0];
 
               const subtasks = [
                 {
-                  id:
-                    getFloorIdValue(todayFloorFromApi) ||
-                    getFloorIdValue(todayFloorFromDetail) ||
-                    `sub-${schedule.scheduleId}-0`,
-                  floorId:
-                    getFloorIdValue(todayFloorFromApi) ||
-                    getFloorIdValue(todayFloorFromDetail),
+                  id: todayFloor.floorId || `sub-${schedule.scheduleId}-0`,
+                  floorId: todayFloor.floorId,
                   scheduleId: schedule.scheduleId,
-                  text:
-                    todayFloorFromApi?.title ||
-                    todayFloorFromApi?.floorTitle ||
-                    todayFloorFromDetail?.title ||
-                    `단계 1`,
-                  done: completedStatus,
+                  text: todayFloor.title || todayFloor.floorTitle || `단계 1`,
+                  done: todayFloor.completed || false,
                   dayNumber: daysDiff + 1,
-                  scheduledDate: targetScheduledDate,
-                  isTeamPlan:
-                    detail.teamId !== null && detail.teamId !== undefined,
                 },
               ];
 
@@ -614,133 +519,95 @@ export default function Home() {
                 endDate: detail.endDate,
               };
             } catch (err) {
+              console.warn(
+                `Schedule ${schedule.scheduleId} 상세 정보 로드 실패:`,
+                err
+              );
               return null;
             }
           })
         );
 
         const validTodayTasks = todayTasks.filter((t) => t !== null);
+        setTasks(validTodayTasks);
 
-        const sortedTasks = [...validTodayTasks].sort((a, b) => {
-          const aAllDone =
-            a.subtasks.length > 0 && a.subtasks.every((s) => s.done);
-          const bAllDone =
-            b.subtasks.length > 0 && b.subtasks.every((s) => s.done);
-          if (aAllDone && !bAllDone) return 1;
-          if (!aAllDone && bAllDone) return -1;
-          return 0;
-        });
+        // 미달성 퀘스트 찾기 (과거 날짜에 있지만 완료되지 않은 계획)
+        const undoneQuestsList = [];
+        if (Array.isArray(allSchedules) && allSchedules.length > 0) {
+          for (const schedule of allSchedules) {
+            try {
+              const detail = await getSchedule(schedule.scheduleId);
+              const startDate = new Date(detail.startDate);
+              const endDate = new Date(detail.endDate);
+              const todayDate = new Date(todayStr);
 
-        setTasks(sortedTasks);
+              // 과거 날짜에 있는 계획인지 확인
+              if (endDate < todayDate) {
+                const floorsList = detail.floors || [];
+                const undoneFloors = floorsList.filter((f) => !f.completed);
 
-        // 미달성 퀘스트 조회 (개인 플랜)
-        try {
-          const missedResponse = await getMissedPersonalPlace();
-          const missedSchedules = Array.isArray(missedResponse)
-            ? missedResponse
-            : missedResponse
-            ? [missedResponse]
-            : [];
-          const undoneQuestsList = missedSchedules.map(
-            (schedule, scheduleIndex) => {
-              const scheduleFloors = schedule.floors || [];
-              const startDate = schedule.startDate
-                ? new Date(schedule.startDate)
-                : null;
-              const undoneSubtasks = scheduleFloors.map((floor, index) => {
-                const scheduledDate = floor.scheduledDate
-                  ? new Date(floor.scheduledDate)
-                  : null;
-                let dayNumber = index + 1;
-                if (startDate && scheduledDate) {
-                  const start = new Date(startDate);
-                  const target = new Date(scheduledDate);
-                  start.setHours(0, 0, 0, 0);
-                  target.setHours(0, 0, 0, 0);
-                  const daysDiff = Math.floor(
-                    (target - start) / (1000 * 60 * 60 * 24)
+                if (undoneFloors.length > 0) {
+                  const undoneSubtasks = undoneFloors.map(
+                    (floorItem, index) => {
+                      const floorDate = new Date(startDate);
+                      floorDate.setDate(startDate.getDate() + index);
+                      const daysDiff = Math.floor(
+                        (floorDate - startDate) / (1000 * 60 * 60 * 24)
+                      );
+
+                      return {
+                        id:
+                          floorItem.floorId ||
+                          `sub-${schedule.scheduleId}-${index}`,
+                        floorId: floorItem.floorId,
+                        scheduleId: schedule.scheduleId,
+                        text: floorItem.title || `단계 ${index + 1}`,
+                        done: floorItem.completed || false,
+                        dayNumber: daysDiff + 1,
+                        scheduledDate: formatDate(floorDate),
+                      };
+                    }
                   );
-                  dayNumber = daysDiff + 1;
+
+                  const doneCount = undoneSubtasks.filter((s) => s.done).length;
+                  undoneQuestsList.push({
+                    id: schedule.scheduleId?.toString() || `task-${Date.now()}`,
+                    title: schedule.title || "제목 없음",
+                    progress: `${doneCount}/${undoneSubtasks.length}`,
+                    subtasks: undoneSubtasks,
+                    color: schedule.color || "#3a8284",
+                  });
                 }
-
-                return {
-                  id: floor.floorId || `sub-${schedule.scheduleId}-${index}`,
-                  floorId: floor.floorId,
-                  scheduleId: schedule.scheduleId,
-                  text: floor.title || `단계 ${index + 1}`,
-                  done: isFloorCompleted(floor),
-                  dayNumber,
-                  scheduledDate: floor.scheduledDate || null,
-                };
-              });
-
-              const doneCount = undoneSubtasks.filter((s) => s.done).length;
-              return {
-                id:
-                  schedule.scheduleId?.toString() ||
-                  `task-${scheduleIndex}-${Date.now()}`,
-                title: schedule.scheduleTitle || schedule.title || "제목 없음",
-                progress: `${doneCount}/${undoneSubtasks.length}`,
-                subtasks: undoneSubtasks,
-                color: schedule.scheduleColor || schedule.color || "#3a8284",
-              };
+              }
+            } catch (err) {
+              console.warn(
+                `미달성 퀘스트 로드 실패 (${schedule.scheduleId}):`,
+                err
+              );
             }
-          );
-          setUndoneTasks(undoneQuestsList);
-        } catch (missedError) {
-          setUndoneTasks([]);
+          }
         }
+        setUndoneTasks(undoneQuestsList);
 
-        // 진행도 계산
-        const total = todayFloors.length;
-        let done = 0;
+        // 오늘 작업 목록의 총 subtask 개수로 todayProgress 업데이트
+        const totalSubtasks = validTodayTasks.reduce(
+          (sum, task) => sum + task.subtasks.length,
+          0
+        );
+        const doneSubtasks = validTodayTasks.reduce(
+          (sum, task) => sum + task.subtasks.filter((s) => s.done).length,
+          0
+        );
 
-        for (const floor of todayFloors) {
-          let isCompleted = false;
-
-          if (todayFloorsStatus && Array.isArray(todayFloorsStatus)) {
-            const statusFloor = todayFloorsStatus.find(
-              (f) => getFloorIdValue(f) === floor.floorId
-            );
-            if (statusFloor) {
-              isCompleted = isFloorCompleted(statusFloor);
-            }
-          }
-
-          if (!isCompleted) {
-            if (isFloorCompleted(floor)) {
-              isCompleted = true;
-            } else {
-              try {
-                const detail = await getSchedule(floor.scheduleId);
-                const detailFloors = detail.floors || [];
-                const detailFloor = detailFloors.find(
-                  (f) => getFloorIdValue(f) === floor.floorId
-                );
-                if (detailFloor) {
-                  isCompleted = isFloorCompleted(detailFloor);
-                }
-              } catch (err) {}
-            }
-          }
-          if (isCompleted) done++;
-        }
-
-        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-        setTodayProgress({
-          done,
-          total,
-          percent,
-        });
-
-        // API에서 층수 가져오기
-        try {
-          const profile = await getMyProfile();
-          if (profile && profile.personalLevel !== undefined) {
-            setPersonalLevel(profile.personalLevel);
-          }
-        } catch (error) {}
+        setTodayProgress((prev) => ({
+          ...prev,
+          total: totalSubtasks,
+          done: doneSubtasks,
+          percent:
+            totalSubtasks > 0
+              ? Math.round((doneSubtasks / totalSubtasks) * 100)
+              : 0,
+        }));
       } else {
         setTasks([]);
         setUndoneTasks([]);
@@ -752,6 +619,7 @@ export default function Home() {
         }));
       }
     } catch (error) {
+      console.error("일정 로드 실패:", error);
       setTasks([]);
       setUndoneTasks([]);
       setTodayProgress((prev) => ({
@@ -771,21 +639,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 페이지가 다시 포커스될 때 서버 상태와 동기화
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        loadTasks();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   // 일정 삭제 핸들러
   const handleDeleteSchedule = async (scheduleId) => {
     if (
@@ -801,427 +654,15 @@ export default function Home() {
       alert("일정이 삭제되었습니다.");
       await loadTasks();
     } catch (error) {
+      console.error("일정 삭제 실패:", error);
       alert("일정 삭제에 실패했습니다. 다시 시도해주세요.");
-    }
-  };
-
-  // =========================
-  // 이하 토글 로직(원본 그대로)
-  // =========================
-  const handleSubtaskToggle = async (task, subtask, e) => {
-    if (subtask.isTeamPlan) {
-      e.preventDefault();
-      alert("팀 플랜의 항목은 개인 플랜에서 완료할 수 없습니다.");
-      return;
-    }
-
-    if (!subtask.floorId) {
-      e.preventDefault();
-      return;
-    }
-
-    e.preventDefault();
-
-    let serverCompleted = false;
-    try {
-      const statusDate = getStatusDateForSubtask(subtask);
-
-      try {
-        const todayFloorsStatus = await getFloorsStatusByDate(statusDate);
-        if (Array.isArray(todayFloorsStatus)) {
-          const statusFloor = todayFloorsStatus.find(
-            (f) => getFloorIdValue(f) === subtask.floorId
-          );
-          if (statusFloor) {
-            serverCompleted = isFloorCompleted(statusFloor);
-          }
-        }
-      } catch (statusError) {}
-
-      if (!serverCompleted) {
-        try {
-          const detail = await getSchedule(subtask.scheduleId);
-          const detailFloors = detail.floors || [];
-          const detailFloor = detailFloors.find(
-            (f) => getFloorIdValue(f) === subtask.floorId
-          );
-          if (detailFloor) {
-            serverCompleted = isFloorCompleted(detailFloor);
-          }
-        } catch (scheduleError) {}
-      }
-
-      if (!serverCompleted && subtask.done === true) {
-        serverCompleted = true;
-      }
-    } catch (error) {
-      serverCompleted = subtask.done;
-    }
-
-    if (serverCompleted === true) {
-      try {
-        const uncompleteResult = await uncompleteFloor(subtask.floorId);
-
-        const newTasks = tasks.map((t) => {
-          if (t.id !== task.id) return t;
-          const updatedSubtasks = t.subtasks.map((s) =>
-            s.id === subtask.id ? { ...s, done: false } : s
-          );
-          const doneCount = updatedSubtasks.filter((s) => s.done).length;
-          return {
-            ...t,
-            subtasks: updatedSubtasks,
-            progress: `${doneCount}/${updatedSubtasks.length}`,
-          };
-        });
-
-        const sortedTasks = [...newTasks].sort((a, b) => {
-          const aAllDone =
-            a.subtasks.length > 0 && a.subtasks.every((s) => s.done);
-          const bAllDone =
-            b.subtasks.length > 0 && b.subtasks.every((s) => s.done);
-          if (aAllDone && !bAllDone) return 1;
-          if (!aAllDone && bAllDone) return -1;
-          return 0;
-        });
-
-        setTasks(sortedTasks);
-
-        const statusDate = getStatusDateForSubtask(subtask);
-        try {
-          const updatedStatus = await getFloorsStatusByDate(statusDate);
-          if (Array.isArray(updatedStatus)) {
-            const total = updatedStatus.length;
-            const done = updatedStatus.filter((f) =>
-              isFloorCompleted(f)
-            ).length;
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-            setTodayProgress({
-              done,
-              total,
-              percent,
-            });
-          }
-        } catch (progressError) {
-          const updatedTodayFloors = await getTodayFloors();
-          if (Array.isArray(updatedTodayFloors)) {
-            const total = updatedTodayFloors.length;
-            let done = 0;
-            for (const floor of updatedTodayFloors) {
-              if (isFloorCompleted(floor)) done++;
-            }
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-            setTodayProgress({ done, total, percent });
-          }
-        }
-
-        const profile = await getMyProfile();
-        const currentFloorBeforeUpdate = currentFloor;
-        const apiLevel =
-          profile?.personalLevel ?? uncompleteResult?.personalLevel;
-        const normalizedApiLevel = Number(apiLevel);
-        const fallbackLevel = Math.max(1, currentFloorBeforeUpdate - 1);
-        const nextPersonalLevel =
-          Number.isFinite(normalizedApiLevel) &&
-          normalizedApiLevel !== currentFloorBeforeUpdate
-            ? normalizedApiLevel
-            : fallbackLevel;
-        if (nextPersonalLevel !== undefined) {
-          const desired = Math.max(1, nextPersonalLevel);
-          if (desired !== currentFloor && !isMoving) {
-            goToFloor(desired);
-            setPersonalLevel(nextPersonalLevel);
-          } else {
-            setPersonalLevel(nextPersonalLevel);
-          }
-        }
-      } catch (error) {
-        if (error.status === 400) {
-          await loadTasks();
-          return;
-        }
-        if (error.status === 403) {
-          alert(
-            "이 항목을 취소할 권한이 없습니다. 개인 플랜의 항목만 취소할 수 있습니다."
-          );
-          await loadTasks();
-          return;
-        }
-        await loadTasks();
-      }
-      return;
-    }
-
-    try {
-      const completeResult = await completeFloor(subtask.floorId);
-      const coinsAwarded = Number(
-        completeResult?.coinsAwarded ?? completeResult?.coinAwarded ?? 0
-      );
-
-      if (Number.isFinite(coinsAwarded) && coinsAwarded > 0) {
-        const completedAt =
-          completeResult?.completedAt ?? new Date().toISOString();
-        const seenKey = `coin_popup_seen:floor_complete:${subtask.floorId}:${completedAt}`;
-        if (localStorage.getItem(seenKey) !== "1") {
-          setPopupQueue((prev) => [
-            ...prev,
-            { type: "coin", coinAmount: coinsAwarded, seenKey },
-          ]);
-        }
-      }
-      const newTasks = tasks.map((t) => {
-        if (t.id !== task.id) return t;
-        const updatedSubtasks = t.subtasks.map((s) =>
-          s.id === subtask.id ? { ...s, done: true } : s
-        );
-        const doneCount = updatedSubtasks.filter((s) => s.done).length;
-        return {
-          ...t,
-          subtasks: updatedSubtasks,
-          progress: `${doneCount}/${updatedSubtasks.length}`,
-        };
-      });
-
-      const sortedTasks = [...newTasks].sort((a, b) => {
-        const aAllDone =
-          a.subtasks.length > 0 && a.subtasks.every((s) => s.done);
-        const bAllDone =
-          b.subtasks.length > 0 && b.subtasks.every((s) => s.done);
-        if (aAllDone && !bAllDone) return 1;
-        if (!aAllDone && bAllDone) return -1;
-        return 0;
-      });
-
-      setTasks(sortedTasks);
-
-      const statusDate = getStatusDateForSubtask(subtask);
-      try {
-        const updatedStatus = await getFloorsStatusByDate(statusDate);
-        if (Array.isArray(updatedStatus)) {
-          const total = updatedStatus.length;
-          const done = updatedStatus.filter((f) => isFloorCompleted(f)).length;
-          const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-          setTodayProgress({
-            done,
-            total,
-            percent,
-          });
-        }
-      } catch (progressError) {
-        const updatedTodayFloors = await getTodayFloors();
-        if (Array.isArray(updatedTodayFloors)) {
-          const total = updatedTodayFloors.length;
-          let done = 0;
-          for (const floor of updatedTodayFloors) {
-            if (isFloorCompleted(floor)) done++;
-          }
-          const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-          setTodayProgress({ done, total, percent });
-        }
-      }
-
-      const profile = await getMyProfile();
-      const currentFloorBeforeUpdate = currentFloor;
-      const apiLevel = profile?.personalLevel ?? completeResult?.personalLevel;
-      const normalizedApiLevel = Number(apiLevel);
-      const fallbackLevel = Math.max(1, currentFloorBeforeUpdate + 1);
-      const nextPersonalLevel =
-        Number.isFinite(normalizedApiLevel) &&
-        normalizedApiLevel !== currentFloorBeforeUpdate
-          ? normalizedApiLevel
-          : fallbackLevel;
-      if (nextPersonalLevel !== undefined) {
-        const desired = Math.max(1, nextPersonalLevel);
-        if (desired > currentFloorBeforeUpdate && !isMoving && isOpen) {
-          goToFloor(desired);
-          setPersonalLevel(nextPersonalLevel);
-        } else {
-          setPersonalLevel(nextPersonalLevel);
-        }
-      }
-    } catch (error) {
-      if (error.status === 400) {
-        await loadTasks();
-        return;
-      }
-      if (error.status === 403) {
-        alert(
-          "이 항목을 완료할 권한이 없습니다. 개인 플랜의 항목만 완료할 수 있습니다."
-        );
-        await loadTasks();
-        return;
-      }
-      await loadTasks();
-    }
-  };
-
-  const handleUndoneSubtaskToggle = async (task, subtask, e) => {
-    if (!subtask.floorId) {
-      e.preventDefault();
-      return;
-    }
-
-    e.preventDefault();
-
-    const isCurrentlyDone = subtask.done === true;
-
-    if (isCurrentlyDone) {
-      try {
-        const uncompleteResult = await uncompleteFloor(subtask.floorId);
-
-        const updatedUndoneTasks = undoneTasks.map((t) => {
-          if (t.id !== task.id) return t;
-          const updatedSubtasks = t.subtasks.map((s) =>
-            s.id === subtask.id ? { ...s, done: false } : s
-          );
-          const doneCount = updatedSubtasks.filter((s) => s.done).length;
-          return {
-            ...t,
-            subtasks: updatedSubtasks,
-            progress: `${doneCount}/${updatedSubtasks.length}`,
-          };
-        });
-        setUndoneTasks(updatedUndoneTasks);
-
-        const statusDate = getStatusDateForSubtask(subtask);
-        try {
-          const updatedStatus = await getFloorsStatusByDate(statusDate);
-          if (Array.isArray(updatedStatus)) {
-            const total = updatedStatus.length;
-            const done = updatedStatus.filter((f) =>
-              isFloorCompleted(f)
-            ).length;
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-            setTodayProgress({ done, total, percent });
-          }
-        } catch (progressError) {
-          const updatedTodayFloors = await getTodayFloors();
-          if (Array.isArray(updatedTodayFloors)) {
-            const total = updatedTodayFloors.length;
-            let done = 0;
-            for (const floor of updatedTodayFloors) {
-              if (isFloorCompleted(floor)) done++;
-            }
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-            setTodayProgress({ done, total, percent });
-          }
-        }
-
-        const profile = await getMyProfile();
-        const currentFloorBeforeUpdate = currentFloor;
-        const apiLevel =
-          profile?.personalLevel ?? uncompleteResult?.personalLevel;
-        const normalizedApiLevel = Number(apiLevel);
-        const fallbackLevel = Math.max(1, currentFloorBeforeUpdate - 1);
-        const nextPersonalLevel =
-          Number.isFinite(normalizedApiLevel) &&
-          normalizedApiLevel !== currentFloorBeforeUpdate
-            ? normalizedApiLevel
-            : fallbackLevel;
-        if (nextPersonalLevel !== undefined) {
-          const desired = Math.max(1, nextPersonalLevel);
-          if (desired !== currentFloor && !isMoving) {
-            goToFloor(desired);
-            setPersonalLevel(nextPersonalLevel);
-          } else {
-            setPersonalLevel(nextPersonalLevel);
-          }
-        }
-      } catch (error) {
-        if (error.status === 400) {
-          await loadTasks();
-          return;
-        }
-        if (error.status === 403) {
-          alert(
-            "이 항목을 취소할 권한이 없습니다. 개인 플랜의 항목만 취소할 수 있습니다."
-          );
-          await loadTasks();
-          return;
-        }
-        await loadTasks();
-      }
-      return;
-    }
-
-    try {
-      const completeResult = await completeFloor(subtask.floorId);
-
-      const updatedUndoneTasks = undoneTasks.map((t) => {
-        if (t.id !== task.id) return t;
-        const updatedSubtasks = t.subtasks.map((s) =>
-          s.id === subtask.id ? { ...s, done: true } : s
-        );
-        const doneCount = updatedSubtasks.filter((s) => s.done).length;
-        return {
-          ...t,
-          subtasks: updatedSubtasks,
-          progress: `${doneCount}/${updatedSubtasks.length}`,
-        };
-      });
-      setUndoneTasks(updatedUndoneTasks);
-
-      const statusDate = getStatusDateForSubtask(subtask);
-      try {
-        const updatedStatus = await getFloorsStatusByDate(statusDate);
-        if (Array.isArray(updatedStatus)) {
-          const total = updatedStatus.length;
-          const done = updatedStatus.filter((f) => isFloorCompleted(f)).length;
-          const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-          setTodayProgress({ done, total, percent });
-        }
-      } catch (progressError) {
-        const updatedTodayFloors = await getTodayFloors();
-        if (Array.isArray(updatedTodayFloors)) {
-          const total = updatedTodayFloors.length;
-          let done = 0;
-          for (const floor of updatedTodayFloors) {
-            if (isFloorCompleted(floor)) done++;
-          }
-          const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-          setTodayProgress({ done, total, percent });
-        }
-      }
-
-      const profile = await getMyProfile();
-      const currentFloorBeforeUpdate = currentFloor;
-      const apiLevel = profile?.personalLevel ?? completeResult?.personalLevel;
-      const normalizedApiLevel = Number(apiLevel);
-      const fallbackLevel = Math.max(1, currentFloorBeforeUpdate + 1);
-      const nextPersonalLevel =
-        Number.isFinite(normalizedApiLevel) &&
-        normalizedApiLevel !== currentFloorBeforeUpdate
-          ? normalizedApiLevel
-          : fallbackLevel;
-      if (nextPersonalLevel !== undefined) {
-        const desired = Math.max(1, nextPersonalLevel);
-        if (desired > currentFloorBeforeUpdate && !isMoving && isOpen) {
-          goToFloor(desired);
-          setPersonalLevel(nextPersonalLevel);
-        } else {
-          setPersonalLevel(nextPersonalLevel);
-        }
-      }
-    } catch (error) {
-      if (error.status === 400) {
-        await loadTasks();
-        return;
-      }
-      if (error.status === 403) {
-        alert(
-          "이 항목을 완료할 권한이 없습니다. 개인 플랜의 항목만 완료할 수 있습니다."
-        );
-        await loadTasks();
-        return;
-      }
-      await loadTasks();
     }
   };
 
   return (
     <div className="app home-view">
+      <BackButton />
+
       <div className="home-header">
         <img className="home-logo" src="/images/logo.png" alt="FLOORIDA" />
       </div>
@@ -1234,18 +675,21 @@ export default function Home() {
               alt="층수 표시판"
               className="floor-indicator-bg"
             />
-            <span className="floor-indicator-number">{personalLevel}</span>
+            <span className="floor-indicator-number">{currentFloor}</span>
           </div>
 
           <div className="floor-scene">
-            <FloorBackground personalLevel={personalLevel} />
+            <img
+              src={backgroundImg}
+              alt="배경"
+              className="floor-background-img"
+            />
           </div>
 
           <div
             className="elevator-inside"
             style={{ backgroundImage: `url(${elevatorInsideImg})` }}
           >
-            {/* ✅❌ 아이템/뱃지 장착 렌더 제거 → 캐릭터 베이스만 */}
             {characterImageUrl && (
               <img
                 src={characterImageUrl}
@@ -1265,14 +709,9 @@ export default function Home() {
         total={todayProgress.total}
       />
 
-      <TaskListSection
-        loading={loading}
-        tasks={tasks}
-        undoneTasks={undoneTasks}
-        showUndoneQuests={showUndoneQuests}
-        onToggleUndoneQuests={() => setShowUndoneQuests((prev) => !prev)}
-        onSubtaskToggle={handleSubtaskToggle}
-        onUndoneSubtaskToggle={handleUndoneSubtaskToggle}
+      <MonthProjects
+        onProgressChange={setProgressInfo}
+        onProjectCountChange={setProjectCount}
       />
 
       <Navbar
@@ -1281,7 +720,7 @@ export default function Home() {
         }}
       />
 
-      {/* ✅✅✅ (이식) 팝업 큐: 50 → 10 → 뱃지(들) 순서 보장 */}
+      {/* ✅ 팝업 큐 (안정): entry + task-complete + badge 모두 같은 큐로 처리 */}
       {activePopup?.type === "coin" && (
         <CoinPopup
           coinAmount={activePopup.coinAmount}
@@ -1294,7 +733,7 @@ export default function Home() {
       )}
 
       {/* ✅ 큐 끝난 뒤에만 주간 모달 */}
-      {popupQueue.length === 0 && showWeeklyModal && (
+      {popupBootstrapped && popupQueue.length === 0 && showWeeklyModal && (
         <WeeklyAchievementModal onClose={() => setShowWeeklyModal(false)} />
       )}
     </div>
